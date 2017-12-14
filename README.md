@@ -6,7 +6,8 @@
   - ../api/skindata[/id] : 저장된 모든 데이터 조회 혹은 id(int <- auto generated)로 조회
 
 * JSON Data
-  - SkinData
+'''javascript
+  SkinData
   {
     image               : 사진 파일
     measured_at         : 측정 일자(자동 생성)
@@ -19,3 +20,4 @@
     score_total         : 종합 점수
     comment             : 전문가 코멘트 (아직 필요 없음)
   }
+'''
