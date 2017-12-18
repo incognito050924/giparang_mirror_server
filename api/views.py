@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, filters, status, generics
+from rest_framework import viewsets, filters, status, generics, views
 from rest_framework.decorators import api_view
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import User,  SkinData
 from .serializers import UserSerializer, ResultSerializer, MeasuredSerializer, SkinDataSerializer
 from .filters import SkinDataFilter
-from datetime import date, datetime
+from datetime import date
 
 
 # Create your views here.
@@ -30,12 +30,18 @@ class ResultViewSet(viewsets.ModelViewSet):
     filter_class = SkinDataFilter
 
 
-class MeasuredViewSet(viewsets.ModelViewSet):
+class MeasuredViewSet(views.APIView) :
     """
 
     """
     queryset = SkinData.objects.all()
     serializer_class = MeasuredSerializer
+
+    # def post(self, request, format='jpeg'):
+    #     image = request.FILES['image']
+    #     print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n",image)
+    #     print(type(image))
+
 
 
 # ModelViewSet은 `list`와 `create`, `retrieve`, `update`, 'destroy` 기능을 자동으로 지원합니다
@@ -70,12 +76,14 @@ def result_list(request):
     """
     # When server received request by GET Method, then return all result data.
     if request.method == 'GET':
-        status_list = SkinData.objects.all()
+        status_list = SkinData.objects.filter(
+        measured_at__startswith=date.today()).order_by('-measured_at')[:1]
         serializer = ResultSerializer(status_list, many=True, context={'request': request})
-        return JsonResponse(serializer.data)
+        return JsonResponse(serializer.data, safe=False)
 
     # When server received request by POST Method, then create result data.
     elif request.method == 'POST':
+        print(request)
         serializer = MeasuredSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -94,6 +102,7 @@ def result_list_by_year_month(request, year, month):
     status_list = SkinData.objects.none()
     measured_dates = SkinData.objects.dates('measured_at', 'day', order='DESC')
     for measured_date in measured_dates:
+        print(type(measured_date))
         if measured_date.year == int(year) and measured_date.month == int(month):
             status_list = status_list.union(SkinData.objects.filter(measured_at__startswith=measured_date).order_by('-measured_at')[:1])
     serializer = ResultSerializer(status_list, many=True, context={'request': request})
@@ -105,10 +114,12 @@ def result_list_by_year_month_day(request, year, month, day):
     """
     년/월/일에 해당하는 데이터를 리턴한다.
     """
+    # status_list = SkinData.objects.filter(
+    #     measured_at__year=year,
+    #     measured_at__month=month,
+    #     measured_at__day=day).order_by('-measured_at')
     status_list = SkinData.objects.filter(
-        measured_at__year=year,
-        measured_at__month=month,
-        measured_at__day=day).order_by('-measured_at')[:1]
+        measured_at__startswith=date(int(year), int(month), int(day))).order_by('-measured_at')[:1]
     serializer = ResultSerializer(status_list, many=True, context={'request': request})
     return JsonResponse(serializer.data, safe=False)
 
@@ -138,3 +149,13 @@ def result_list_by_year_month_day(request, year, month, day):
 #     elif request.method == 'DELETE':
 #         result.delete()
 #         return JsonResponse(status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET', 'POST'])
+def test(request):
+    """
+    측정 데이터 분석 후 분석데이터 저장(POST method) 및 점수리스트 조회(GET method)
+    """
+    # When server received request by GET Method, then return all result data.
+    data = request.data
+    print(data)
+    return JsonResponse(data)

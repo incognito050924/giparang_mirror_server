@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 import os
+import pymysql
+pymysql.install_as_MySQLdb()
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,8 +27,8 @@ SECRET_KEY = 'r63!62j@(&3$70b8)m9h!o7q@haf87d_bohhr6fzw=@vltn^ev'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['192.168.0.6', 'localhost', '180.67.133.114']
+#APPEND_SLASH=False
 
 # Application definition
 
@@ -77,14 +79,25 @@ WSGI_APPLICATION = 'giparang_mirror_server.wsgi.application'
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases
 
 DATABASES = {
+    # MySQL Settings.
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': 'giparang_mirror',
         'USER': 'giparang_admin',
         'PASSWORD': 'giparang123!',
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '3306',
     }
+
+    # PostgreSQL Settings.
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     'NAME': 'giparang_mirror',
+    #     'USER': 'giparang_admin',
+    #     'PASSWORD': 'giparang123!',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
+    # }
 }
 
 REST_FRAMEWORK = {
@@ -131,7 +144,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/

@@ -23,7 +23,8 @@ class SkinDataSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = SkinData
         fields = ('image', 'measured_at', 'is_trained',
-                  'score_erythema', 'score_emotion', 'score_pigmentation', 'score_pore', 'score_wrinkle', 'comment',)
+                  'score_erythema', 'score_emotion', 'score_pigmentation', 'score_pore', 'score_wrinkle', 'score_total',
+                  'comment',)
 
     def create(self, validated_data):
         validated_data.update(analysis.get_score_data())
@@ -34,7 +35,7 @@ class ResultSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = SkinData
         fields = ('measured_at', 'score_erythema', 'score_emotion', 'score_pigmentation', 'score_pore', 'score_wrinkle',
-                  'comment',)
+                  'score_total', 'comment',)
 
     # def create(self, validated_data):
     #     return SkinData.objects.create(**validated_data)
@@ -58,7 +59,8 @@ class ResultSerializer(serializers.HyperlinkedModelSerializer):
 class MeasuredSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = SkinData
-        fields = ('image', 'measured_at',)
+        fields = ('image', 'measured_at', 'score_erythema', 'score_emotion', 'score_pigmentation', 'score_pore', 'score_wrinkle',
+                  'score_total', 'comment',)
 
     def create(self, validated_data):
         validated_data.update(analysis.get_score_data())
