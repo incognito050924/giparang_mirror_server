@@ -25,7 +25,7 @@ class Detector:
 
 
 def get_score_data(erythema=-1.0, emotion=-1.0, pigmentation=-1.0, pore=-1.0, wrinkle=-1.0):
-    # 총점 계산(산술 평균) 시에 적용할 각 요소별 가중치
+    # 총점 계산(산술 평균) 시에 적용할 각 요소별 가중치, 각 가중치의 총합은 5가 되도록 유지해야함.
     WEIGHT_ERYTHEMA = 1.0
     WEIGHT_EMOTION = 1.0
     WEIGHT_PIGMENTATION = 1.0
@@ -41,6 +41,7 @@ def get_score_data(erythema=-1.0, emotion=-1.0, pigmentation=-1.0, pore=-1.0, wr
     scores = np.array([round(score, 2) if score > 0 else round(random.random() * 100, 2) for score in points])
     # 가중치를 적용한 평균 계산.
     score_total = np.average(scores * weights)
+    score_total = round(score_total, 2)
 
     return {
             'score_erythema': scores[0],

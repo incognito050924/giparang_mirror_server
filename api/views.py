@@ -1,3 +1,4 @@
+
 from django.shortcuts import render
 from rest_framework import viewsets, filters, status, generics, views
 from rest_framework.decorators import api_view
@@ -52,6 +53,10 @@ class SkinDataViewSet(viewsets.ModelViewSet):
     queryset = SkinData.objects.all()
     serializer_class = SkinDataSerializer
 
+def to_json(query_set):
+    for data in query_set:
+        dictionary = {data.as_dict()}
+    return dictionary
 
 # @csrf_exempt
 # def get_data_by_user(request, pk):
@@ -99,12 +104,11 @@ def result_list_by_year_month(request, year, month):
     # status_list = SkinData.objects.filter(measured_at__year=year, measured_at__month=month).order_by('-measured_at')
     # for skindata in status_list:
     #     print(skindata.measured_at.date())
-    status_list = SkinData.objects.none()
-    measured_dates = SkinData.objects.dates('measured_at', 'day', order='DESC')
+    status_list = []
+    measured_dates = SkinData.objects.dates('measured_at', 'day', order='ASC')
     for measured_date in measured_dates:
-        print(type(measured_date))
         if measured_date.year == int(year) and measured_date.month == int(month):
-            status_list = status_list.union(SkinData.objects.filter(measured_at__startswith=measured_date).order_by('-measured_at')[:1])
+            status_list.extend(list(SkinData.objects.filter(measured_at__startswith=measured_date).order_by('-measured_at')[:1]))
     serializer = ResultSerializer(status_list, many=True, context={'request': request})
     return JsonResponse(serializer.data, safe=False)
 
@@ -118,8 +122,15 @@ def result_list_by_year_month_day(request, year, month, day):
     #     measured_at__year=year,
     #     measured_at__month=month,
     #     measured_at__day=day).order_by('-measured_at')
-    status_list = SkinData.objects.filter(
+    status_list = []
+    today_status = SkinData.objects.order_by('-measured_at').annotate()[:1]
+    status_list.extend(list(today_status))
+
+    status = SkinData.objects.filter(
         measured_at__startswith=date(int(year), int(month), int(day))).order_by('-measured_at')[:1]
+    status_list.extend(list(status))
+
+#    today_status['is_today'] = 'Y'
     serializer = ResultSerializer(status_list, many=True, context={'request': request})
     return JsonResponse(serializer.data, safe=False)
 
