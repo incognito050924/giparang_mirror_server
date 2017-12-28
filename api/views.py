@@ -9,6 +9,7 @@ from .models import User,  SkinData
 from .serializers import UserSerializer, ResultSerializer, MeasuredSerializer, SkinDataSerializer
 from .filters import SkinDataFilter
 from datetime import date
+from services.analysis import Extractor, CascadeDetector, LandmarkDetector, Analyzer
 
 
 # Create your views here.
@@ -161,12 +162,17 @@ def result_list_by_year_month_day(request, year, month, day):
 #         result.delete()
 #         return JsonResponse(status=status.HTTP_204_NO_CONTENT)
 
-@api_view(['GET', 'POST'])
+@api_view(['POST'])
 def test(request):
     """
     측정 데이터 분석 후 분석데이터 저장(POST method) 및 점수리스트 조회(GET method)
     """
     # When server received request by GET Method, then return all result data.
     data = request.data
-    print(data)
+
+    serializer = SkinDataSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+    return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(data)

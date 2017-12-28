@@ -26,9 +26,9 @@ class SkinDataSerializer(serializers.HyperlinkedModelSerializer):
                   'score_erythema', 'score_emotion', 'score_pigmentation', 'score_pore', 'score_wrinkle', 'score_total',
                   'comment',)
 
-    def create(self, validated_data):
-        validated_data.update(analysis.get_score_data())
-        return SkinData.objects.create(**validated_data)
+    # def create(self, validated_data):
+    #     validated_data.update(analysis.get_score_data())
+    #     return SkinData.objects.create(**validated_data)
 
 
 class ResultSerializer(serializers.HyperlinkedModelSerializer):
