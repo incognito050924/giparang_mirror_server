@@ -1,15 +1,25 @@
 
+import os
+import copy
 from django.shortcuts import render
 from rest_framework import viewsets, filters, status, generics, views
 from rest_framework.decorators import api_view
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django_filters.rest_framework import DjangoFilterBackend
+from django.core.files.storage import FileSystemStorage
+from django.conf import settings
 from .models import User,  SkinData
 from .serializers import UserSerializer, ResultSerializer, MeasuredSerializer, SkinDataSerializer
 from .filters import SkinDataFilter
 from datetime import date
-from services.analysis import Extractor, CascadeDetector, LandmarkDetector, Analyzer
+from .services.analysis import Extractor, CascadeDetector, LandmarkDetector, Analyzer, get_score_data
+import cv2
+import numpy as np
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from PIL import Image
+from io import BytesIO
 
 
 # Create your views here.
@@ -89,7 +99,6 @@ def result_list(request):
 
     # When server received request by POST Method, then create result data.
     elif request.method == 'POST':
-        print(request)
         serializer = MeasuredSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -167,12 +176,29 @@ def test(request):
     """
     측정 데이터 분석 후 분석데이터 저장(POST method) 및 점수리스트 조회(GET method)
     """
-    # When server received request by GET Method, then return all result data.
     data = request.data
+    temp_img = copy.deepcopy(request.FILES['image'])
+    # img = bytes2opencv_img(temp_img)
+
+    # extractor = Extractor()
+    # extractor.extract_pore(img)
+    # print(extractor.pore)
+    score_dict = get_score_data()
+    data.update(score_dict)
 
     serializer = SkinDataSerializer(data=data)
     if serializer.is_valid():
+        # print(serializer.validated_data['image'])
         serializer.save()
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse(data)
+
+def bytes2opencv_img(img_raw):
+    img_str = img_raw.read()
+    img_nparr = np.fromstring(img_str, np.uint8)
+    img = cv2.imdecode(img_nparr, cv2.IMREAD_COLOR)
+    # cv2.imshow('Uploaded', img)
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
+    return img
