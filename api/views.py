@@ -192,7 +192,7 @@ def test(request):
         serializer.save()
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    return JsonResponse(data)
+    # return JsonResponse(data)
 
 def bytes2opencv_img(img_raw):
     img_str = img_raw.read()

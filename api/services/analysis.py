@@ -5,6 +5,73 @@ import dlib
 import math
 from network import client
 
+def gradation_width(img, from_color, to_color):
+    h, w = img.shape[:2]
+    if w <= 0:
+        color_weight = np.array([0, 0, 0], np.uint8)
+    else:
+        color_weight = (to_color - from_color) / w
+    for x in range(w):
+        img[0:h, x] = add_color(from_color, color_weight * (x+1))
+
+def gradation_height(img, from_color, to_color):
+    h, w = img.shape[:2]
+    if h <= 0:
+        color_weight = np.array([0, 0, 0], np.uint8)
+    else:
+        color_weight = (to_color - from_color) / h
+    for y in range(h):
+        img[y, 0:w] = add_color(from_color, color_weight * (y+1))
+
+def get_cosine_kernel(x_size, y_size=None):
+    if y_size is None:
+        return cosine(np.arange(x_size), fs=x_size-1, f=1)
+    else:
+        kernel = np.empty((x_size, y_size))
+        for i in range(x_size):
+            # x = min(i, x_fs-i-1)
+            x = min(i, x_size - 1 - i)
+            # x -= i
+            for j in range(y_size):
+                y = min(j, y_size - j - 1)
+                val = min(x, y)
+                if x < y:
+                    # val -= x
+                    val = (x_size-1) / 2 - x
+                    # val = x
+                kernel[i][j] = val
+        return cosine(kernel, fs=x_size-1, f=1)
+
+def cosine(x, fs, f=1):
+    """
+    1 ~ 0 사이의 Cosine wave
+    :param x: x value
+    :param fs: 진폭
+    :param f: 주기
+    :return:
+    """
+    # print(x)
+    return (np.cos(2 * np.pi * f * (x / fs)) + 1) / 2
+
+def average_color(img):
+    b, g, r = cv2.split(img)
+
+    avg_b = b.mean()
+    avg_g = g.mean()
+    avg_r = r.mean()
+
+    return (avg_b, avg_g, avg_r)
+
+def add_color(img1, img2):
+    """
+    OpenCV image color를 더한다. 255 이상의 값은 255, 0 이하의 값은 0으로 고정한다.(연산 결과를 0 ~ 255 사이의 값으로 유지)
+    :param img1: 더하고자 하는 이미지
+    :param img2: 더하고자 하는 이미지
+    :return: 결과 이미지
+    """
+    added = img1 + img2
+    return np.clip(added, 0, 255)
+
 
 class TooManyFaces(Exception):
     pass
@@ -281,13 +348,20 @@ class LandmarkDetector:
         overlay = img.copy()
         for idx, point in enumerate(landmarks):
             pos = (point[0, 0], point[0, 1])
-            cv2.putText(img, str(idx), pos, fontFace=cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale=0.4, color=(0, 0, 255))
-            cv2.circle(img, pos, 3, color=(0, 255, 255))
+            cv2.putText(overlay, str(idx), pos, fontFace=cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale=0.4, color=(0, 0, 255))
+            cv2.circle(overlay, pos, 3, color=(0, 255, 255))
 
         return overlay
 
-    def eye_dilate(self, eyes, x_rate=1.6, y_rate=2):
-        result = eyes
+    def expand_eye(self, eyes, x_rate=1.6, y_rate=2.0):
+        """
+        눈 영역을 확장한다.
+        :param eyes: eye landmark(points array)
+        :param x_rate: x축 확장 비율
+        :param y_rate: y축 확장 비율
+        :return: 확장된 eye landmark(points array)
+        """
+        result = eyes.copy()
 
         x_half_length = math.ceil((eyes[3][0, 0] - eyes[0][0, 0]) / 2)
         x_center = eyes[3][0, 0] - x_half_length
@@ -313,8 +387,15 @@ class LandmarkDetector:
 
         return result
 
-    def eye_brow_dilate(self, eye_brows, x_rate=1.1, y_rate=1.3):
-        result = eye_brows
+    def expand_eye_brow(self, eye_brows, x_rate=1.1, y_rate=1.3):
+        """
+        눈썹 영역을 확장한다.
+        :param eye_brows: eye_brow landmark(points array)
+        :param x_rate: x축 확장 비율
+        :param y_rate: y축 확장 비율
+        :return: 확장된 eye_brow landmark(points array)
+        """
+        result = eye_brows.copy()
 
         x_half_length = math.ceil((eye_brows[4][0, 0] - eye_brows[0][0, 0]) / 2)
         x_center = eye_brows[4][0, 0] - x_half_length
@@ -335,8 +416,15 @@ class LandmarkDetector:
 
         return result
 
-    def nose_dilate(self, nose, x_rate=1.3, y_rate=1):
-        result = nose
+    def expand_nose(self, nose, x_rate=1.3, y_rate=1.0):
+        """
+        코 영역을 확장한다.
+        :param nose: nose landmark(points array)
+        :param x_rate: x축 확장 비율
+        :param y_rate: y축 확장 비율
+        :return: 확장된 nose landmark(points array)
+        """
+        result = nose.copy()
 
         x1_half_length = math.ceil((nose[8][0, 0] - nose[4][0, 0]) / 2)
         x1_center = nose[8][0, 0] - x1_half_length
@@ -362,8 +450,15 @@ class LandmarkDetector:
 
         return result
 
-    def mouth_dilate(self, mouth, x_rate=1.2, y_rate=1.2):
-        result = mouth
+    def expand_mouth(self, mouth, x_rate=1.2, y_rate=1.2):
+        """
+        입 영역을 확장한다.
+        :param mouth: mouth landmark(points array)
+        :param x_rate: x축 확장 비율
+        :param y_rate: y축 확장 비율
+        :return: 확장된 mouth landmark(points array)
+        """
+        result = mouth.copy()
 
         x1_half_length = math.ceil((mouth[6][0, 0] - mouth[0][0, 0]) / 2)
         x1_center = mouth[6][0, 0] - x1_half_length
@@ -446,46 +541,235 @@ class LandmarkDetector:
         cv2.waitKey()
         cv2.destroyAllWindows()
 
-    def remove_landmarks_from_img(self, img, landmarks, color=(0,0,0),
-                      use_feature=['jaw', 'right_eyebrow', 'left_eyebrow', 'nose', 'right_eye', 'left_eye', 'mouth']):
-        # create two copies of the input image -- one for the
-        # overlay and one for the final output image
-        overlay = img.copy()
+    # def expand_landmarks_from_img(self, img, landmarks, color=(0,0,0),
+    #                   use_feature=['jaw', 'right_eyebrow', 'left_eyebrow', 'nose', 'right_eye', 'left_eye', 'mouth']):
+    #     # create two copies of the input image -- one for the
+    #     # overlay and one for the final output image
+    #     overlay = img.copy()
+    #
+    #     facial_landmarks = self.matrix2dict(landmarks)
+    #     for i, feature in enumerate(use_feature):
+    #         pts = facial_landmarks[feature]
+    #         if feature == 'jaw':
+    #             for idx in range(1, len(pts)):
+    #                 ptA = (pts[idx - 1][0, 0], pts[idx - 1][0, 1])
+    #                 ptB = (pts[idx][0, 0], pts[idx][0, 1])
+    #                 cv2.line(overlay, ptA, ptB, color, 2)
+    #                 cv2.circle(overlay, ptB, 3, color=(0, 255, 255))
+    #
+    #         else:
+    #             if feature == 'right_eye' or feature == 'left_eye':
+    #                 pts = self.expand_eye(facial_landmarks[feature])
+    #             elif feature == 'right_eyebrow' or feature == 'left_eyebrow':
+    #                 pts = self.expand_eye_brow(facial_landmarks[feature])
+    #             elif feature == 'mouth':
+    #                 pts = self.expand_mouth(facial_landmarks[feature])
+    #             elif feature == 'nose':
+    #                 pts = self.expand_nose(facial_landmarks[feature], x_rate=1.5)
+    #             hull = cv2.convexHull(pts)
+    #             cv2.drawContours(overlay, [hull], -1, color, -1)
+    #
+    #             for idx in range(len(pts)):
+    #                 pos = (pts[idx][0, 0], pts[idx][0, 1])
+    #                 cv2.circle(overlay, pos, 3, color=(0, 255, 255))
+    #
+    #     landmark_area_min_x, landmark_area_min_y, landmark_area_max_x, landmark_area_max_y = self.range_from_landmark(landmarks)
+    #     overlay = overlay[landmark_area_min_y:landmark_area_max_y, landmark_area_min_x:landmark_area_max_x]
+    #
+    #     cv2.imshow('Remove_Landmarks', overlay)
+    #     cv2.waitKey()
+    #     cv2.destroyAllWindows()
+    #
+    #     return overlay
 
-        facial_landmarks = self.matrix2dict(landmarks)
-        for i, feature in enumerate(use_feature):
-            pts = facial_landmarks[feature]
-            if feature == 'jaw':
-                for idx in range(1, len(pts)):
-                    ptA = (pts[idx - 1][0, 0], pts[idx - 1][0, 1])
-                    ptB = (pts[idx][0, 0], pts[idx][0, 1])
-                    cv2.line(overlay, ptA, ptB, color, 2)
-                    cv2.circle(overlay, ptB, 3, color=(0, 255, 255))
+    def remove_feature(self, face, feature_points, fill_color, fill_area_rate=0.6, mean_range=10):
+        (fx, fy, fw, fh) = feature_points
+        feature = face[fy:fy + fh, fx:fx + fw]
 
-            else:
-                if feature == 'right_eye' or feature == 'left_eye':
-                    pts = self.eye_dilate(facial_landmarks[feature])
-                elif feature == 'right_eyebrow' or feature == 'left_eyebrow':
-                    pts = self.eye_brow_dilate(facial_landmarks[feature])
-                elif feature == 'mouth':
-                    pts = self.mouth_dilate(facial_landmarks[feature])
-                elif feature == 'nose':
-                    pts = self.nose_dilate(facial_landmarks[feature], x_rate=1.5)
-                hull = cv2.convexHull(pts)
-                cv2.drawContours(overlay, [hull], -1, color, -1)
+        # feature 영역에서 fill_area_rate 만큼의 영역을 fill_color로 채움. 채우는 영역은 feature 영역의 중심
+        min_rate = (1-fill_area_rate) / 2
+        max_rate = min_rate + fill_area_rate
+        fill_area_min_x = int(fw * min_rate)
+        fill_area_min_y = int(fh * min_rate)
+        fill_area_max_x = int(fw * max_rate)
+        fill_area_max_y = int(fh * max_rate)
+        fill_area = np.zeros((fill_area_max_y-fill_area_min_y, fill_area_max_x-fill_area_min_x, 3), np.uint8)
+        fill_area[:] = fill_color
+        feature[fill_area_min_y:fill_area_max_y, fill_area_min_x:fill_area_max_x] = fill_area
 
-                for idx in range(len(pts)):
-                    pos = (pts[idx][0, 0], pts[idx][0, 1])
-                    cv2.circle(overlay, pos, 3, color=(0, 255, 255))
+        # X axis
+        prev_x_mean = np.mean(face[fy:fy + fh, fx - mean_range:fx - 1], axis=1)
+        next_x_mean = np.mean(face[fy:fy + fh, fx + fw + 1:fx + fw + mean_range], axis=1)
 
-        landmark_area_min_x, landmark_area_min_y, landmark_area_max_x, landmark_area_max_y = self.range_from_landmark(landmarks)
-        overlay = overlay[landmark_area_min_y:landmark_area_max_y, landmark_area_min_x:landmark_area_max_x]
+        # Y axis
+        prev_y_mean = np.mean(face[fy - mean_range:fy - 1, fx:fx + fw], axis=0)
+        next_y_mean = np.mean(face[fy + fh + 1:fy + fh + mean_range, fx:fx + fw], axis=0)
 
-        cv2.imshow('Remove_Landmarks', overlay)
+        # for i in range(fill_area_min_x):
+        gradation_width(face[fy+fill_area_min_y:fy+fill_area_max_y, fx:fx+fill_area_min_x],
+                        from_color=prev_x_mean[fill_area_min_y:fill_area_max_y],
+                        to_color=face[fy+fill_area_min_y:fy+fill_area_max_y, fx+fill_area_min_x])
+        # for i in range(fill_area_max_x+1, fx+fw):
+        gradation_width(face[fy+fill_area_min_y:fy+fill_area_max_y, fx+fill_area_max_x:fx+fw],
+                        from_color=face[fy+fill_area_min_y:fy+fill_area_max_y, fx+fill_area_max_x-1],
+                        to_color=next_x_mean[fill_area_min_y:fill_area_max_y])
+
+        # for j in range(fill_area_min_y):
+        gradation_height(face[fy:fy+fill_area_min_y, fx+fill_area_min_x:fx+fill_area_max_x],
+                         from_color=prev_y_mean[fill_area_min_x:fill_area_max_x],
+                         to_color=face[fy+fill_area_min_y, fx+fill_area_min_x:fx+fill_area_max_x])
+        # for j in range(fill_area_max_y+1, fy+fh):
+        gradation_height(face[fy+fill_area_max_y:fy+fh, fx + fill_area_min_x:fx + fill_area_max_x],
+                         from_color=face[fy+fill_area_max_y-1, fx+fill_area_min_x:fx+fill_area_max_x],
+                         to_color=next_y_mean[fill_area_min_x:fill_area_max_x])
+
+        for i in range(fw):
+            if i < fill_area_min_x:
+                # Top-Left side
+                mean_y_upper = fill_area_min_y - (i+1)
+                mean_x_upper = fill_area_min_x - (i+1)
+                # if mean_y_upper < 1:
+                #     mean_y_upper = 1
+                mean_value_upper = np.mean(np.array([face[fy+mean_y_upper + 1][fx+mean_x_upper],
+                                                     face[fy+mean_y_upper][fx+mean_x_upper + 1]]), axis=0)
+                #face[fy+mean_y_upper][fx+mean_x_upper] = mean_value_upper
+                gradation_height(np.reshape(face[fy:fy+mean_y_upper+1, fx+mean_x_upper], (mean_y_upper+1, 1, 3)),
+                                 from_color=prev_y_mean[mean_x_upper],
+                                 to_color=mean_value_upper)
+                gradation_width(np.reshape(face[fy+mean_y_upper, fx:fx+mean_x_upper+1], (1, mean_x_upper+1, 3)),
+                                from_color=prev_x_mean[mean_y_upper],
+                                to_color=mean_value_upper)
+                # print('(%d, %d)' % (fy+mean_y_upper+1, fx+mean_x_upper),face[fy+mean_y_upper+1][fx+mean_x_upper],
+                #       '(%d, %d)' % (fy+mean_y_upper, fx+mean_x_upper+1), face[fy+mean_y_upper][fx+mean_x_upper+1])
+                # print('Mean X: (%d, %d)' % (fy+mean_y_upper, fx+mean_x_upper), face[fy+mean_y_upper][fx+mean_x_upper])
+
+                # Bottom-Left side
+                mean_y_lower = fill_area_max_y + i
+                mean_x_lower = mean_x_upper
+                mean_value_lower =  np.mean(np.array([face[fy+mean_y_lower-1][fx+mean_x_lower],
+                                                     face[fy+mean_y_lower][fx+mean_x_lower+1]]), axis=0)
+                gradation_height(np.reshape(face[fy+mean_y_lower-1:fy+fh, fx + mean_x_lower], ((fh-mean_y_lower)+1, 1, 3)),
+                                 from_color=mean_value_lower,
+                                 to_color=next_y_mean[mean_x_lower])
+                gradation_width(np.reshape(face[fy+mean_y_lower, fx:fx+mean_x_lower+1], (1, mean_x_lower+1, 3)),
+                                from_color=prev_x_mean[mean_y_lower],
+                                to_color=mean_value_lower)
+                # print('(%d, %d)' % (fy+mean_y_lower-1, fx+mean_x_lower), face[fy + mean_y_lower-1][fx + mean_x_lower],
+                #       '(%d, %d)' % (fy+mean_y_lower, fx+mean_x_lower+1), face[fy + mean_y_lower][fx + mean_x_lower+1])
+                # print('Mean Y: (%d, %d)'%(fy+mean_y_lower, fx+mean_x_lower), face[fy+mean_y_lower][fx+mean_x_lower])
+
+            elif i >= fill_area_max_x:
+                # Top-Right side
+                mean_y_upper = fill_area_min_y - ((i-fill_area_max_x) + 1)
+                mean_x_upper = i
+                mean_value_upper = np.mean(np.array([face[fy + mean_y_upper+1][fx + mean_x_upper],
+                                                     face[fy + mean_y_upper][fx + mean_x_upper-1]]), axis=0)
+                gradation_height(np.reshape(face[fy:fy+mean_y_upper+1, fx+mean_x_upper], (mean_y_upper+1, 1, 3)),
+                                 from_color=prev_y_mean[mean_x_upper],
+                                 to_color=mean_value_upper)
+                gradation_width(np.reshape(face[fy+mean_y_upper, fx+mean_x_upper-1:fx+fw], (1, (fw-mean_x_upper)+1, 3)),
+                                from_color=mean_value_upper,
+                                to_color=next_x_mean[mean_y_upper])
+
+                # Bottom-Right side
+                mean_y_lower = fill_area_max_y + (i-fill_area_max_x)
+                mean_x_lower = mean_x_upper
+                mean_value_lower = np.mean(np.array([face[fy+mean_y_lower-1][fx+mean_x_lower],
+                                                     face[fy+mean_y_lower][fx+mean_x_lower-1]]), axis=0)
+                gradation_height(np.reshape(face[fy+mean_y_lower-1:fy+fh, fx+mean_x_lower], ((fh-mean_y_lower)+1, 1, 3)),
+                                 from_color=mean_value_lower,
+                                 to_color=next_y_mean[mean_x_lower])
+                gradation_width(np.reshape(face[fy+mean_y_lower, fx+mean_x_lower-1:fx+fw], (1, (fw-mean_x_lower)+1, 3)),
+                                from_color=mean_value_lower,
+                                to_color=next_x_mean[mean_y_lower])
+
+        cv2.imshow('Face', face)
         cv2.waitKey()
         cv2.destroyAllWindows()
+        return face
 
-        return overlay
+
+    def remove_gradation_features(self, face, feature_points, mean_range=10):
+        (fx, fy, fw, fh) = feature_points
+        feature = face[fy:fy+fh, fx:fx+fw]
+        feature_1 = feature.copy()
+        feature_2 = feature.copy()
+
+        # X axis
+        prev_x_mean = np.mean(face[fy:fy+fh, fx - mean_range:fx - 1], axis=1)
+        next_x_mean = np.mean(face[fy:fy+fh, fx+fw+1:fx+fw + mean_range], axis=1)
+        prev_x = face[fy:fy+fh, fx - 1]
+        next_x = face[fy:fy+fh, fx+fw + 1]
+        diff_x = (next_x_mean - prev_x_mean) / fw
+        diff_x_rev = (prev_x_mean - next_x_mean) / fw
+
+        # Y axis
+        prev_y_mean = np.mean(face[fy-mean_range:fy-1, fx:fx+fw], axis=0)
+        next_y_mean = np.mean(face[fy+fh+1:fy+fh+mean_range, fx:fx+fw], axis=0)
+        prev_y = face[fy-1, fx:fx+fw]
+        next_y = face[fy+fh+1, fx:fx+fw]
+        diff_y = (next_y_mean - prev_y_mean) / fh
+        diff_y_rev = (prev_y_mean - next_y_mean) / fh
+
+        # Color Gradation
+        feature_x = feature_1.copy()
+        for i in range(fw):
+            feature_1[:, i] = add_color(prev_x, (diff_x * (i + 1)))
+            feature_2[:, (fw - 1) - i] = add_color(next_x, (diff_x_rev * (i + 1)))
+            feature_x = cv2.addWeighted(feature_1, float(1 - (i / fw)), feature_2, float(i / fw), 1)
+        blur_x = cv2.blur(feature_x, (9, 9))
+        face[fy:fy+fh, fx:fx+fw] = blur_x
+
+        feature_y = feature_2.copy()
+        for j in range(fh):
+            feature_1[j, :] = add_color(prev_y, (diff_y * (j + 1)))
+            feature_2[(fh - 1) - j, :] = add_color(next_y, (diff_y_rev * (j + 1)))
+            feature_y = cv2.addWeighted(feature_1, float(1 - (j / fh)), feature_2, float(j / fh), 1)
+        blur_y = cv2.blur(feature_y, (9, 9))
+        face[fy:fy+fh, fx:fx+fw] = blur_y
+
+        # Add X_Gradation and Y_Gradation
+        weight = get_cosine_kernel(fw)
+        for i in range(fw):
+            pow_val = (weight[i] + 3) ** 2
+            feature_1[:, i] = cv2.addWeighted(feature_x[:, i], float(np.power(weight[i], pow_val)),
+                                              feature_y[:, i], float(1 - np.power(weight[i], pow_val)), 0)
+        face[fy:fy+fh, fx:fx+fw] = feature_1
+        blur = cv2.medianBlur(face[fy-mean_range:fy+fh+mean_range, fx-mean_range:fx+fw+mean_range], 15)
+        face[fy - mean_range:fy + fh + mean_range, fx - mean_range:fx + fw + mean_range] = blur
+
+        # cv2.imshow('Gradation', face)
+        # cv2.waitKey()
+        # cv2.destroyAllWindows()
+        return face
+
+    def remove_eyes(self, img, landmark, face_pts):
+        x, y, w, h = face_pts[0]
+        expanded_landmark = self.expand_eye(landmark, x_rate=1.5, y_rate=1.5)
+        min_x, min_y, max_x, max_y = self.range_from_landmark(expanded_landmark)
+        eye_pts = (min_x, min_y, max_x-min_x, max_y-min_y)
+        # face = self.remove_features(img, eye_pts)
+        face = self.remove_feature(img, eye_pts, np.array([200, 200, 200], np.uint8))
+        return face[y:y+h, x:x+w]
+
+    def remove_nose(self, img, landmark, face_pts):
+        x, y, w, h = face_pts[0]
+        expanded_landmark = self.expand_nose(landmark, x_rate=1.5, y_rate=1.0)
+        min_x, min_y, max_x, max_y = self.range_from_landmark(expanded_landmark)
+        nose_pts = (min_x, min_y, max_x - min_x, max_y - min_y)
+        # face = self.remove_features(img, nose_pts)
+        face = self.remove_feature(img, nose_pts, np.array([200, 200, 250], np.uint8))
+        return face[y:y + h, x:x + w]
+
+    def remove_mouth(self, img, landmark, face_pts):
+        x, y, w, h = face_pts[0]
+        expanded_landmark = self.expand_mouth(landmark, x_rate=1.1, y_rate=1.0)
+        min_x, min_y, max_x, max_y = self.range_from_landmark(expanded_landmark)
+        mouth_pts = (min_x, min_y, max_x - min_x, max_y - min_y)
+        # face = self.remove_features(img, mouth_pts)
+        face = self.remove_feature(img, mouth_pts, np.array([200, 200, 200], np.uint8))
+        return face[y:y + h, x:x + w]
+
 
     def detect_facial_feature(self, img, overlay=None, visible=False, colors=None,
                       use_feature=['jaw', 'right_eyebrow', 'left_eyebrow', 'nose', 'right_eye', 'left_eye', 'mouth']):
@@ -500,46 +784,112 @@ class LandmarkDetector:
         landmarks = self.matrix2dict(self.get_landmarks(img))
 
         features={}
+        points = {}
+
+        removed_landmarks_img = img.copy()
+        skin = None
 
         glabella_min_x, glabella_min_y, glabella_max_x, glabella_max_y, glabella_mid_y = (-1, -1, -1, -1, 0)
+        right_cheek_min_x, right_cheek_min_y, right_cheek_max_x, right_cheek_max_y = (-1, -1, -1, -1)
+        left_cheek_min_x, left_cheek_min_y, left_cheek_max_x, left_cheek_max_y = (-1, -1, -1, -1)
+        face_min_x, face_min_y, face_max_x, face_max_y = (-1, -1, -1, -1)
 
         for i, feature in enumerate(use_feature):
             min_x, min_y, max_x, max_y = self.range_from_landmark(landmarks[feature])
+            points[feature] = [(min_x, min_y, max_x-min_x, max_y-min_y)]
             features[feature] = img[min_y:max_y, min_x:max_x]
             cv2.rectangle(overlay, (min_x, min_y), (max_x, max_y), colors[i], 2)
 
-            if feature == 'right_eye':
+            if feature == 'jaw':
+                face_min_x, face_min_y, face_max_x, face_max_y = self.range_from_landmark(landmarks[feature])
+            elif feature == 'right_eye':
+                # 오른쪽 눈가 이미지 추가
                 side_min_x = min_x - int((max_x - min_x) * 0.7)
                 side_max_x = min_x
+                points['right_eye_side'] = [(side_min_x, min_y, side_max_x - side_min_x, max_y - min_y)]
                 features['right_eye_side'] = img[min_y:max_y, side_min_x:side_max_x]
                 cv2.rectangle(overlay, (side_min_x, min_y), (side_max_x, max_y), (255, 255, 0), 2)
+                # 오른쪽 볼 이미지 추가 사전 작업(1/2)
+                pts = landmarks[feature]
+                right_cheek_min_x = side_min_x #pts[0][0, 0]
+                right_cheek_max_x = min(pts[2][0, 0], pts[4][0, 0])
             elif feature == 'left_eye':
+                # 왼쪽 눈가 이미지 추가
                 side_min_x = max_x
                 side_max_x = max_x + int((max_x - min_x) * 0.7)
+                points['left_eye_side'] = [(side_min_x, min_y, side_max_x - side_min_x, max_y - min_y)]
                 features['left_eye_side'] = img[min_y:max_y, side_min_x:side_max_x]
                 cv2.rectangle(overlay, (side_min_x, min_y), (side_max_x, max_y), (255, 255, 0), 2)
+                # 왼쪽 볼 이미지 추가 사전 작업(1/2)
+                pts = landmarks[feature]
+                left_cheek_min_x = max(pts[1][0, 0], pts[5][0, 0])
+                left_cheek_max_x = side_max_x  # pts[3][0, 0]
             elif feature == 'right_eyebrow':
+                # 미간 이미지 추가 사전 작업(1/3)
                 glabella_min_x = max_x
                 glabella_mid_y = max(glabella_mid_y, max_y - int((max_y - min_y) / 2))
             elif feature == 'left_eyebrow':
+                # 미간 이미지 추가 사전 작업(2/3)
                 glabella_max_x = min_x
                 glabella_mid_y = max(glabella_mid_y, max_y - int((max_y - min_y) / 2))
             elif feature == 'nose':
+                # 미간 이미지 추가 사전 작업(3/3)
                 glabella_min_y = glabella_mid_y - (min_y - glabella_mid_y)
                 glabella_max_y = min_y
+                # 오른쪽/왼쪽 볼 이미지 추가 사전 작업(2/2)
+                pts = landmarks[feature]
+                right_cheek_min_y = left_cheek_min_y = int((pts[1][0, 1] + pts[2][0, 1]) / 2)
+                right_cheek_max_y = left_cheek_max_y = pts[6][0, 1]
+                # 모공 추출용 코 이미지 추가
+                nose_for_pore = pts[2:]
+                min_nx, min_ny, max_nx, max_ny = self.range_from_landmark(nose_for_pore)
+                points['nose_for_pore'] = [(min_nx, min_ny, max_nx - min_nx, max_ny - min_ny)]
+                features['nose_for_pore'] = img[min_ny:max_ny, min_nx:max_nx]
+                cv2.rectangle(overlay, (min_nx, min_ny), (max_nx, max_ny), (255, 255, 0), 2)
+            elif feature == 'mouth':
+                pass
+
 
         # 미간 추가
         if any(n >= 0 for n in [glabella_min_x, glabella_min_y, glabella_max_x, glabella_max_y]):
             glabella_min_y = glabella_mid_y - int((glabella_max_y - glabella_mid_y) * 1.3)
+            points['glabella'] = [(glabella_min_x, glabella_min_y, glabella_max_x - glabella_min_x, glabella_max_y - glabella_min_y)]
             features['glabella'] = img[glabella_min_y:glabella_max_y, glabella_min_x:glabella_max_x]
             cv2.rectangle(overlay, (glabella_min_x, glabella_min_y), (glabella_max_x, glabella_max_y), (255, 0, 255), 2)
 
+        # 오른쪽 볼 추가
+        if any(n >= 0 for n in [right_cheek_min_x, right_cheek_min_y, right_cheek_max_x, right_cheek_max_y]):
+            points['right_cheek'] = [(right_cheek_min_x, right_cheek_min_y, right_cheek_max_x - right_cheek_min_x,
+                                      right_cheek_max_y - right_cheek_min_y)]
+            features['right_cheek'] = img[right_cheek_min_y:right_cheek_max_y, right_cheek_min_x:right_cheek_max_x]
+            cv2.rectangle(overlay, (right_cheek_min_x, right_cheek_min_y), (right_cheek_max_x, right_cheek_max_y), (255, 0, 255), 2)
+
+        # 왼쪽 볼 추가
+        if any(n >= 0 for n in [left_cheek_min_x, left_cheek_min_y, left_cheek_max_x, left_cheek_max_y]):
+            points['left_cheek'] = [(left_cheek_min_x, left_cheek_min_y, left_cheek_max_x - left_cheek_min_x,
+                                      left_cheek_max_y - left_cheek_min_y)]
+            features['left_cheek'] = img[left_cheek_min_y:left_cheek_max_y, left_cheek_min_x:left_cheek_max_x]
+            cv2.rectangle(overlay, (left_cheek_min_x, left_cheek_min_y), (left_cheek_max_x, left_cheek_max_y), (255, 0, 255), 2)
+
+        # 눈, 코, 입 제거한 이미지 추가
+        # if any(n >= 0 for n in [face_min_x, face_min_y, face_max_x, face_max_y]):
+        #     face_pts = points['jaw']
+        #     for key, val in points.items():
+        #         if key.endswith('_eye'):
+        #             skin = self.remove_eyes(removed_landmarks_img, landmarks[key], face_pts)
+        #         elif key == 'nose': #'nose_for_pore'
+        #             skin = self.remove_nose(removed_landmarks_img, landmarks[key], face_pts)
+        #         elif key == 'mouth':
+        #             skin = self.remove_mouth(removed_landmarks_img, landmarks[key], face_pts)
+
         if visible:
             cv2.imshow('Features', overlay)
+            if skin is not None:
+                cv2.imshow('Skin', skin)
             cv2.waitKey()
             cv2.destroyAllWindows()
 
-        return features
+        return features, points
 
 
     def range_from_landmark(self, landmark):
