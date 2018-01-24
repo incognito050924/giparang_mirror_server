@@ -181,15 +181,23 @@ def test(request):
     temp_img = copy.deepcopy(request.FILES['image'])
     img = bytes2opencv_img(temp_img)
 
+    # 표정 예측 모델
     gray_face = CascadeDetector().detect_face(img, use_gray=True, visible=False)
     face = resize_image(gray_face, (128, 128, 1))
     face = np.reshape(face, (128, 128, 1))
     emotion_data = predict_emotion(np.expand_dims(face, 0), text_label=True, order_score=False)
     print(emotion_data)
 
-    # extractor = Extractor()
-    # extractor.extract_pore(img)
-    # print(extractor.pore)
+    # 피부 분석 모듈
+    features, points = LandmarkDetector().detect_facial_feature(img, visible=False)
+    pore_img = features['nose_for_pore']
+    wrinkle_img = features['glabella']
+    extractor = Extractor()
+    extractor.extract_pore(pore_img)
+    extractor.extract_wrinkle(wrinkle_img)
+    print('Pores: ', extractor.pore)
+    print('Wrinkles: ', extractor.wrinkle)
+
     score_dict = get_score_data()
     data.update(score_dict)
 

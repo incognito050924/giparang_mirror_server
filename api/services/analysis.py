@@ -343,7 +343,7 @@ class LandmarkDetector:
         각 요소 추출을 위해 ROI를 찾는 기능을 제공한다.
     """
     def get_landmarks(self, img):
-        PREDICTIOR_PATH = 'shape_predictor_68_face_landmarks.dat'
+        PREDICTIOR_PATH = os.path.join(os.getcwd(), 'api', 'services', 'cascades', 'shape_predictor_68_face_landmarks.dat')
         predictor = dlib.shape_predictor(PREDICTIOR_PATH)
         detector = dlib.get_frontal_face_detector()
 
