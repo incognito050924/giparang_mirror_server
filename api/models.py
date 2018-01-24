@@ -25,12 +25,12 @@ class SkinData(models.Model):
     image = models.ImageField(upload_to='images/test/', blank=False)
     measured_at = models.DateTimeField(auto_now_add=True, editable=False)
     is_trained = models.BooleanField(default=False)
-    score_pore = models.FloatField(blank=True)
-    score_wrinkle = models.FloatField(blank=True)
-    score_pigmentation = models.FloatField(blank=True)
-    score_erythema = models.FloatField(blank=True)
-    score_emotion = models.FloatField(blank=True)
-    score_total = models.FloatField(blank=True)
+    score_pore = models.FloatField(blank=True, default=-1)
+    score_wrinkle = models.FloatField(blank=True, default=-1)
+    score_pigmentation = models.FloatField(blank=True, default=-1)
+    score_erythema = models.FloatField(blank=True, default=-1)
+    score_emotion = models.FloatField(blank=True, default=-1)
+    score_total = models.FloatField(blank=True, default=-1)
     comment = models.TextField(default=None, blank=True, null=True)
 
     # class Meta:

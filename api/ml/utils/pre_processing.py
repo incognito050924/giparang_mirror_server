@@ -6,6 +6,13 @@ import matplotlib.pyplot as plt
 import skimage.io
 import skimage.transform
 
+def preprocess_input(x, v2=True):
+    x = x.astype('float32')
+    x = x / 255.0
+    if v2:
+        x = x - 0.5
+        x = x * 2.0
+    return x
 
 def load_img(file_name, read_gray=False):
     return imread(name=file_name, flatten=read_gray)
@@ -80,7 +87,7 @@ def resize_img_with_cv2(img, new_shape):
         # 기존 이미지 크기 보다 작게 만듦
         interpolation = cv2.INTER_AREA
 
-    return cv2.resize(img, dsize=new_shape, fx=None, fy=None, interpolation=interpolation)
+    return cv2.resize(img, dsize=(new_w, new_h), interpolation=interpolation)
 
 def gray2bgr(img):
     return cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)

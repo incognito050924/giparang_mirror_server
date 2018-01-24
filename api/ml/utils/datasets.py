@@ -3,7 +3,7 @@ import numpy as np
 from scipy.io import loadmat
 from random import shuffle
 import pandas as pd
-from .image_processing import resize_img_with_cv2, gray2bgr
+from .pre_processing import resize_img_with_cv2, gray2bgr
 
 
 dataset_dir = os.path.join(os.path.pardir, 'ml_dataset')

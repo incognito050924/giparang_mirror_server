@@ -13,8 +13,9 @@ from .models import User,  SkinData
 from .serializers import UserSerializer, ResultSerializer, MeasuredSerializer, SkinDataSerializer
 from .filters import SkinDataFilter
 from datetime import date
+from .services.image_processor import bytes2opencv_img, resize_image, bgr2rgb
 from .services.analysis import Extractor, CascadeDetector, LandmarkDetector, Analyzer, get_score_data
-import cv2
+from .ml.predictor import predict_emotion
 import numpy as np
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -178,7 +179,13 @@ def test(request):
     """
     data = request.data
     temp_img = copy.deepcopy(request.FILES['image'])
-    # img = bytes2opencv_img(temp_img)
+    img = bytes2opencv_img(temp_img)
+
+    gray_face = CascadeDetector().detect_face(img, use_gray=True, visible=False)
+    face = resize_image(gray_face, (128, 128, 1))
+    face = np.reshape(face, (128, 128, 1))
+    emotion_data = predict_emotion(np.expand_dims(face, 0), text_label=True, order_score=False)
+    print(emotion_data)
 
     # extractor = Extractor()
     # extractor.extract_pore(img)
@@ -193,12 +200,3 @@ def test(request):
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
     return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     # return JsonResponse(data)
-
-def bytes2opencv_img(img_raw):
-    img_str = img_raw.read()
-    img_nparr = np.fromstring(img_str, np.uint8)
-    img = cv2.imdecode(img_nparr, cv2.IMREAD_COLOR)
-    # cv2.imshow('Uploaded', img)
-    # cv2.waitKey()
-    # cv2.destroyAllWindows()
-    return img

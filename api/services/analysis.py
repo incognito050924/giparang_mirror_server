@@ -1,9 +1,10 @@
+import os
 import random
 import numpy as np
 import cv2
 import dlib
 import math
-from network import client
+from .network import client
 
 def gradation_width(img, from_color, to_color):
     h, w = img.shape[:2]
@@ -100,7 +101,7 @@ class Extractor:
                      tv_3=client.TrackBarValue.NORMAL,
                      tv_4=client.TrackBarValue.NORMAL):
 
-        request_data = client.serialize_req_param_data(client.SkinFeature.PORE, img, tv_1, tv_2, tv_3, tv_4, False)
+        request_data = client.serialize_req_param_data(client.SkinFeature.PORE, img, tv_1, tv_2, tv_3, tv_4, False )
         self.pore = client.request(request_data)
 
     def extract_pigmentation(self, img,
@@ -194,7 +195,8 @@ class CascadeDetector:
                         k_mean += 1
                     else:
                         k_mean -= 1
-                    if k_mean < 1: k_mean = 1
+                    if k_mean < 1:
+                        k_mean = 1
                     features = feature_cascade.detectMultiScale(roi_gray, scale, k_mean)
                     if len(features) > 0:
                         features = [features[0]]
@@ -211,7 +213,6 @@ class CascadeDetector:
             features = feature_cascade.detectMultiScale(roi_gray, scale, k_mean)
 
         return features
-
 
     def __filter_skin(self, img):
         # define the upper and lower boundaries of the HSV pixel
@@ -235,12 +236,44 @@ class CascadeDetector:
 
         return skin
 
+    def detect_face(self, img, use_gray=False, visible=False):
+        face_cascade = cv2.CascadeClassifier(os.path.join(os.getcwd(), 'api', 'services', 'cascades', 'frontalFace.xml'))
+
+        overlay = img.copy()
+        gray = cv2.cvtColor(overlay, cv2.COLOR_BGR2GRAY)
+        # cv2.imshow('Gray', gray)
+        # cv2.waitKey()
+        # cv2.destroyAllWindows()
+
+        faces = self.__get_best_feature_roi(gray, face_cascade, k_mean=5, scale=1.3)
+        for (x, y, w, h) in faces:
+            face = img[y:y + h, x:x + w]
+
+            cv2.rectangle(overlay, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            face_center = self.__get_center(left_top_pixel=(x, y), right_bottom_pixel=(x + w, y + h))
+            cv2.circle(overlay, face_center, 2, (255, 0, 0), -1)
+
+            if visible:
+                h, w = overlay.shape[:2]
+                if h > 1200 or w > 1200:
+                    img = cv2.resize(overlay, dsize=None, fx=0.4, fy=0.4, interpolation=cv2.INTER_AREA)
+                cv2.imshow('Facial Features', overlay)
+                # cv2.imshow('Mask', self.__filter_skin(face_img))
+                cv2.waitKey()
+                cv2.destroyAllWindows()
+
+        if use_gray and face.shape[2] == 3:
+            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+
+        return face
+
 
     def detect_facial_feature(self, img, visible=False):
-        face_cascade = cv2.CascadeClassifier('cascades/frontalFace.xml')
-        eye_cascade = cv2.CascadeClassifier('cascades/Eyes_cascade.xml')
-        nose_cascade = cv2.CascadeClassifier('cascades/Nose_cascade.xml')
-        mouth_cascade = cv2.CascadeClassifier('cascades/Mouth_cascade.xml')
+        cascades_dir = os.path.join(os.getcwd(), 'api', 'services', 'cascades')
+        face_cascade = cv2.CascadeClassifier(os.path.join(cascades_dir, 'frontalFace.xml'))
+        eye_cascade = cv2.CascadeClassifier(os.path.join(cascades_dir, 'Eyes_cascade.xml'))
+        nose_cascade = cv2.CascadeClassifier(os.path.join(cascades_dir, 'Nose_cascade.xml'))
+        mouth_cascade = cv2.CascadeClassifier(os.path.join(cascades_dir, 'Mouth_cascade.xml'))
 
         roi_data = {}
 
@@ -646,7 +679,7 @@ class LandmarkDetector:
                 # Bottom-Left side
                 mean_y_lower = fill_area_max_y + i
                 mean_x_lower = mean_x_upper
-                mean_value_lower =  np.mean(np.array([face[fy+mean_y_lower-1][fx+mean_x_lower],
+                mean_value_lower = np.mean(np.array([face[fy+mean_y_lower-1][fx+mean_x_lower],
                                                      face[fy+mean_y_lower][fx+mean_x_lower+1]]), axis=0)
                 gradation_height(np.reshape(face[fy+mean_y_lower-1:fy+fh, fx + mean_x_lower], ((fh-mean_y_lower)+1, 1, 3)),
                                  from_color=mean_value_lower,

@@ -8,7 +8,7 @@ import tensorflow as tf
 batch_size = 32
 num_epochs = 10000
 input_shape = (299, 299, 3) # input_shape = (64, 64, 1)
-# num_classes = 7
+num_classes = 7
 validation_split = .2
 val_acc = 0
 val_acc_max = 0
