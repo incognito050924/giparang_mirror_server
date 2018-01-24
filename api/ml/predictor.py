@@ -6,7 +6,7 @@ from .utils.pre_processing import preprocess_input
 save_dir = os.path.join(os.getcwd(), 'api', 'ml', 'trained', 'slim_inception_v3/')
 
 
-def predict_emotion(img, text_label=True, order_score=False, checkpoint=None):
+def predict_emotion(img, text_label=True, checkpoint=None):
     x_data = preprocess_input(img)
     num_classes = 7
     if checkpoint is None:
@@ -42,13 +42,12 @@ def predict_emotion(img, text_label=True, order_score=False, checkpoint=None):
         text_ground_truth = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
         pred = text_ground_truth[preds[0]]
 
-    if order_score:
-        if text_label:
-            emotion_text2score = {'angry': 0, 'sad': 1, 'disgust': 2, 'fear': 3,
-                                  'surprise': 4, 'neutral': 5, 'happy': 6}
-            pred = emotion_text2score[pred]
-        else:
-            emotion_logits2score = {0: 0, 1: 2, 2: 3, 3: 6, 4: 1, 5: 4, 6: 5}
-            pred = emotion_logits2score[preds[0]]
+    if text_label:
+        emotion_text2score = {'angry': 0, 'sad': 1, 'disgust': 2, 'fear': 3,
+                              'surprise': 4, 'neutral': 5, 'happy': 6}
+        order = emotion_text2score[pred]
+    else:
+        emotion_logits2score = {0: 0, 1: 2, 2: 3, 3: 6, 4: 1, 5: 4, 6: 5}
+        order = emotion_logits2score[preds[0]]
 
-    return pred
+    return pred, order

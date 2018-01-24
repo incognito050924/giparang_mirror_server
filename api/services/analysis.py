@@ -93,7 +93,7 @@ class Extractor:
                      tv_4=client.TrackBarValue.NORMAL):
 
         request_data = client.serialize_req_param_data(client.SkinFeature.ERYTHEMA, img, tv_1, tv_2, tv_3, tv_4, False)
-        self.erythema = client.request(request_data)
+        return client.request(request_data)
 
     def extract_pore(self, img,
                      tv_1=client.TrackBarValue.NORMAL,
@@ -102,7 +102,7 @@ class Extractor:
                      tv_4=client.TrackBarValue.NORMAL):
 
         request_data = client.serialize_req_param_data(client.SkinFeature.PORE, img, tv_1, tv_2, tv_3, tv_4, False )
-        self.pore = client.request(request_data)
+        return client.request(request_data)
 
     def extract_pigmentation(self, img,
                      tv_1=client.TrackBarValue.NORMAL,
@@ -111,7 +111,7 @@ class Extractor:
                      tv_4=client.TrackBarValue.NORMAL):
 
         request_data = client.serialize_req_param_data(client.SkinFeature.PIGMENTATION, img, tv_1, tv_2, tv_3, tv_4, False)
-        self.pigmentation = client.request(request_data)
+        return client.request(request_data)
 
     def extract_wrinkle(self, img,
                      tv_1=client.TrackBarValue.NORMAL,
@@ -120,17 +120,17 @@ class Extractor:
                      tv_4=client.TrackBarValue.NORMAL):
 
         request_data = client.serialize_req_param_data(client.SkinFeature.WRINKLE, img, tv_1, tv_2, tv_3, tv_4, False)
-        self.wrinkle = client.request(request_data)
+        return client.request(request_data)
 
-    def extract_all(self, img,
+    def extract_all(self, erythema_img, pore_img, pigmentation_img, wrinkle_img,
                      tv_1=client.TrackBarValue.NORMAL,
                      tv_2=client.TrackBarValue.NORMAL,
                      tv_3=client.TrackBarValue.NORMAL,
                      tv_4=client.TrackBarValue.NORMAL):
-        self.extract_erythema(img, tv_1, tv_2, tv_3, tv_4)
-        self.extract_pore(img, tv_1, tv_2, tv_3, tv_4)
-        self.extract_pigmentation(img, tv_1, tv_2, tv_3, tv_4)
-        self.extract_wrinkle(img, tv_1, tv_2, tv_3, tv_4)
+        self.extract_erythema(erythema_img, tv_1, tv_2, tv_3, tv_4)
+        self.extract_pore(pore_img, tv_1, tv_2, tv_3, tv_4)
+        self.extract_pigmentation(pigmentation_img, tv_1, tv_2, tv_3, tv_4)
+        self.extract_wrinkle(wrinkle_img, tv_1, tv_2, tv_3, tv_4)
 
     def getFeatureData(self):
         data = dict()
@@ -145,29 +145,82 @@ class Analyzer:
     """
     추출된 요소의 갯수 등을 이용하여 점수화하는 함수를 제공한다.
     """
-    def analyze_erythema(self, erythema_data):
-        num_erythema = erythema_data['Count']
-        avg_area = erythema_data['Area']
-        avg_darkness = erythema_data['Darkness']
-        print('Erythema[ %d, %d, %d ]' % (num_erythema, avg_area, avg_darkness))
+    min_score = {}
+    max_score = {}
 
-    def analyze_pore(self, pore_data):
-        num_pore = pore_data['Count']
-        print('Pore[ %d ]' % (num_pore))
+    def __init__(self):
+        self.extractor = Extractor()
 
-    def analyze_pigmentation(self, pigmentation_data):
-        num_pigmentation = pigmentation_data['Count']
-        avg_area = pigmentation_data['Area']
-        avg_darkness = pigmentation_data['Darkness']
-        print('Pigmentation[ %d, %d, %d ]' % (num_pigmentation, avg_area, avg_darkness))
+    def analyze_emotion(self, emotion_data, result_data=None):
+        emotion_data['score_emotion'] = (emotion_data['score_emotion'] + 4) * 10
+        if result_data is not None:
+            emotion_data.update(result_data)
+        return emotion_data
 
-    def analyze_wrinkle(self, wrinkle_data):
-        num_wrinkle = wrinkle_data['Count']
-        avg_area = wrinkle_data['Area']
-        avg_darkness = wrinkle_data['Darkness']
-        pitch = wrinkle_data['Pitch']
-        length = wrinkle_data['Length']
-        print('Wrinkle[ %d, %d, %d, %d, %d ]' % (num_wrinkle, avg_area, avg_darkness, pitch, length))
+    def analyze_erythema(self, erythema_img, result_data=None):
+        mapped_key = {'Count': 'erythema_num', 'Area': 'erythema_average_area', 'Darkness': 'erythema_darkness'}
+        erythema_data = self.extractor.extract_erythema(erythema_img)
+        erythema_data = change_key(erythema_data, mapped_key)
+        num_erythema = erythema_data['erythema_num']
+        avg_area = erythema_data['erythema_average_area']
+        avg_darkness = erythema_data['erythema_darkness']
+        erythema_data['score_erythema'] = get_random_normal()[0]
+        #print('Erythema[ %d, %d, %d ]' % (num_erythema, avg_area, avg_darkness))
+        if result_data is not None:
+            erythema_data.update(result_data)
+        return erythema_data
+
+    def analyze_pore(self, pore_img, result_data=None):
+        mapped_key = {'Count': 'pore_num'}
+        pore_data = self.extractor.extract_pore(pore_img)
+        pore_data = change_key(pore_data, mapped_key)
+        num_pore = pore_data['pore_num']
+        pore_data['score_pore'] = get_random_normal()[0]
+        #print('Pore[ %d ]' % (num_pore))
+        if result_data is not None:
+            pore_data.update(result_data)
+        return pore_data
+
+    def analyze_pigmentation(self, pigmentation_img, result_data=None):
+        mapped_key = {'Count': 'pigmentation_num', 'Area': 'pigmentation_average_area', 'Darkness': 'pigmentation_darkness'}
+        pigmentation_data = self.extractor.extract_pigmentation(pigmentation_img)
+        pigmentation_data = change_key(pigmentation_data, mapped_key)
+        num_pigmentation = pigmentation_data['pigmentation_num']
+        avg_area = pigmentation_data['pigmentation_average_area']
+        avg_darkness = pigmentation_data['pigmentation_darkness']
+        pigmentation_data['score_pigmentation'] = get_random_normal()[0]
+        #print('Pigmentation[ %d, %d, %d ]' % (num_pigmentation, avg_area, avg_darkness))
+        if result_data is not None:
+            pigmentation_data.update(result_data)
+        return pigmentation_data
+
+    def analyze_wrinkle(self, wrinkle_img, result_data=None):
+        mapped_key = {'Count': 'wrinkle_num', 'Area': 'wrinkle_average_area', 'Darkness': 'wrinkle_darkness',
+                      'Pitch': 'wrinkle_pitch', 'Length': 'wrinkle_length'}
+        wrinkle_data = self.extractor.extract_wrinkle(wrinkle_img)
+        wrinkle_data = change_key(wrinkle_data, mapped_key)
+        num_wrinkle = wrinkle_data['wrinkle_num']
+        avg_area = wrinkle_data['wrinkle_average_area']
+        avg_darkness = wrinkle_data['wrinkle_darkness']
+        pitch = wrinkle_data['wrinkle_pitch']
+        length = wrinkle_data['wrinkle_length']
+        wrinkle_data['score_wrinkle'] = get_random_normal()[0]
+        #print('Wrinkle[ %d, %d, %d, %d, %d ]' % (num_wrinkle, avg_area, avg_darkness, pitch, length))
+        if result_data is not None:
+            wrinkle_data.update(result_data)
+        return wrinkle_data
+
+    def calc_total_score(self, result_data):
+        score_emotion = result_data['score_emotion']
+        score_erythema = result_data['score_erythema']
+        score_pore = result_data['score_pore']
+        score_pigmentation = result_data['score_pigmentation']
+        score_wrinkle = result_data['score_wrinkle']
+        total_score = get_score_data(emotion=score_emotion, erythema=score_erythema,
+                       pore=score_pore, pigmentation=score_pigmentation, wrinkle=score_wrinkle)
+        result_data['score_total'] = total_score['score_total']
+        return result_data
+
 
 
 class CascadeDetector:
@@ -261,7 +314,8 @@ class CascadeDetector:
                 # cv2.imshow('Mask', self.__filter_skin(face_img))
                 cv2.waitKey()
                 cv2.destroyAllWindows()
-
+        if faces is None or len(faces) == 0:
+            face = gray
         if use_gray and face.shape[2] == 3:
             face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
 
@@ -343,7 +397,8 @@ class LandmarkDetector:
         각 요소 추출을 위해 ROI를 찾는 기능을 제공한다.
     """
     def get_landmarks(self, img):
-        PREDICTIOR_PATH = os.path.join(os.getcwd(), 'api', 'services', 'cascades', 'shape_predictor_68_face_landmarks.dat')
+        PREDICTIOR_PATH = os.path.join(os.getcwd(), 'api', 'services', 'cascades',
+                                       'shape_predictor_68_face_landmarks.dat')
         predictor = dlib.shape_predictor(PREDICTIOR_PATH)
         detector = dlib.get_frontal_face_detector()
 
@@ -385,6 +440,16 @@ class LandmarkDetector:
             cv2.circle(overlay, pos, 3, color=(0, 255, 255))
 
         return overlay
+
+    def calc_appended_image_size(self, img_points):
+        # print(img_points)
+        width = np.max(img_points, axis=0)[2]
+        height = 0
+        for i, pts in enumerate(img_points):
+            height += pts[3]
+
+        return (height, width)
+
 
     def expand_eye(self, eyes, x_rate=1.6, y_rate=2.0):
         """
@@ -615,7 +680,7 @@ class LandmarkDetector:
     #
     #     return overlay
 
-    def remove_feature(self, face, feature_points, fill_color, fill_area_rate=0.6, mean_range=10):
+    def remove_feature(self, face, feature_points, fill_color, fill_area_rate=0.3, mean_range=10):
         (fx, fy, fw, fh) = feature_points
         feature = face[fy:fy + fh, fx:fx + fw]
 
@@ -656,6 +721,10 @@ class LandmarkDetector:
                          from_color=face[fy+fill_area_max_y-1, fx+fill_area_min_x:fx+fill_area_max_x],
                          to_color=next_y_mean[fill_area_min_x:fill_area_max_x])
 
+        # print(feature_points)
+        # print(prev_x_mean.shape, prev_y_mean.shape)
+        # print(next_x_mean.shape, next_y_mean.shape)
+
         for i in range(fw):
             if i < fill_area_min_x:
                 # Top-Left side
@@ -669,9 +738,10 @@ class LandmarkDetector:
                 gradation_height(np.reshape(face[fy:fy+mean_y_upper+1, fx+mean_x_upper], (mean_y_upper+1, 1, 3)),
                                  from_color=prev_y_mean[mean_x_upper],
                                  to_color=mean_value_upper)
-                gradation_width(np.reshape(face[fy+mean_y_upper, fx:fx+mean_x_upper+1], (1, mean_x_upper+1, 3)),
-                                from_color=prev_x_mean[mean_y_upper],
-                                to_color=mean_value_upper)
+                if mean_y_upper >= 0:
+                    gradation_width(np.reshape(face[fy+mean_y_upper, fx:fx+mean_x_upper+1], (1, mean_x_upper+1, 3)),
+                                    from_color=prev_x_mean[mean_y_upper],
+                                    to_color=mean_value_upper)
                 # print('(%d, %d)' % (fy+mean_y_upper+1, fx+mean_x_upper),face[fy+mean_y_upper+1][fx+mean_x_upper],
                 #       '(%d, %d)' % (fy+mean_y_upper, fx+mean_x_upper+1), face[fy+mean_y_upper][fx+mean_x_upper+1])
                 # print('Mean X: (%d, %d)' % (fy+mean_y_upper, fx+mean_x_upper), face[fy+mean_y_upper][fx+mean_x_upper])
@@ -679,14 +749,15 @@ class LandmarkDetector:
                 # Bottom-Left side
                 mean_y_lower = fill_area_max_y + i
                 mean_x_lower = mean_x_upper
-                mean_value_lower = np.mean(np.array([face[fy+mean_y_lower-1][fx+mean_x_lower],
+                mean_value_lower =  np.mean(np.array([face[fy+mean_y_lower-1][fx+mean_x_lower],
                                                      face[fy+mean_y_lower][fx+mean_x_lower+1]]), axis=0)
                 gradation_height(np.reshape(face[fy+mean_y_lower-1:fy+fh, fx + mean_x_lower], ((fh-mean_y_lower)+1, 1, 3)),
                                  from_color=mean_value_lower,
                                  to_color=next_y_mean[mean_x_lower])
-                gradation_width(np.reshape(face[fy+mean_y_lower, fx:fx+mean_x_lower+1], (1, mean_x_lower+1, 3)),
-                                from_color=prev_x_mean[mean_y_lower],
-                                to_color=mean_value_lower)
+                if mean_y_lower < prev_x_mean.shape[0]:
+                    gradation_width(np.reshape(face[fy+mean_y_lower, fx:fx+mean_x_lower+1], (1, mean_x_lower+1, 3)),
+                                    from_color=prev_x_mean[mean_y_lower],
+                                    to_color=mean_value_lower)
                 # print('(%d, %d)' % (fy+mean_y_lower-1, fx+mean_x_lower), face[fy + mean_y_lower-1][fx + mean_x_lower],
                 #       '(%d, %d)' % (fy+mean_y_lower, fx+mean_x_lower+1), face[fy + mean_y_lower][fx + mean_x_lower+1])
                 # print('Mean Y: (%d, %d)'%(fy+mean_y_lower, fx+mean_x_lower), face[fy+mean_y_lower][fx+mean_x_lower])
@@ -700,9 +771,10 @@ class LandmarkDetector:
                 gradation_height(np.reshape(face[fy:fy+mean_y_upper+1, fx+mean_x_upper], (mean_y_upper+1, 1, 3)),
                                  from_color=prev_y_mean[mean_x_upper],
                                  to_color=mean_value_upper)
-                gradation_width(np.reshape(face[fy+mean_y_upper, fx+mean_x_upper-1:fx+fw], (1, (fw-mean_x_upper)+1, 3)),
-                                from_color=mean_value_upper,
-                                to_color=next_x_mean[mean_y_upper])
+                if mean_y_upper >= 0:
+                    gradation_width(np.reshape(face[fy+mean_y_upper, fx+mean_x_upper-1:fx+fw], (1, (fw-mean_x_upper)+1, 3)),
+                                    from_color=mean_value_upper,
+                                    to_color=next_x_mean[mean_y_upper])
 
                 # Bottom-Right side
                 mean_y_lower = fill_area_max_y + (i-fill_area_max_x)
@@ -712,13 +784,14 @@ class LandmarkDetector:
                 gradation_height(np.reshape(face[fy+mean_y_lower-1:fy+fh, fx+mean_x_lower], ((fh-mean_y_lower)+1, 1, 3)),
                                  from_color=mean_value_lower,
                                  to_color=next_y_mean[mean_x_lower])
-                gradation_width(np.reshape(face[fy+mean_y_lower, fx+mean_x_lower-1:fx+fw], (1, (fw-mean_x_lower)+1, 3)),
-                                from_color=mean_value_lower,
-                                to_color=next_x_mean[mean_y_lower])
+                if mean_y_lower < next_x_mean.shape[0]:
+                    gradation_width(np.reshape(face[fy+mean_y_lower, fx+mean_x_lower-1:fx+fw], (1, (fw-mean_x_lower)+1, 3)),
+                                    from_color=mean_value_lower,
+                                    to_color=next_x_mean[mean_y_lower])
 
-        cv2.imshow('Face', face)
-        cv2.waitKey()
-        cv2.destroyAllWindows()
+        # cv2.imshow('Face', face)
+        # cv2.waitKey()
+        # cv2.destroyAllWindows()
         return face
 
 
@@ -791,7 +864,7 @@ class LandmarkDetector:
         min_x, min_y, max_x, max_y = self.range_from_landmark(expanded_landmark)
         nose_pts = (min_x, min_y, max_x - min_x, max_y - min_y)
         # face = self.remove_features(img, nose_pts)
-        face = self.remove_feature(img, nose_pts, np.array([200, 200, 250], np.uint8))
+        face = self.remove_feature(img, nose_pts, np.array([200, 200, 200], np.uint8))
         return face[y:y + h, x:x + w]
 
     def remove_mouth(self, img, landmark, face_pts):
@@ -821,6 +894,8 @@ class LandmarkDetector:
 
         removed_landmarks_img = img.copy()
         skin = None
+        pore_rois = None
+        wrinkle_rois = None
 
         glabella_min_x, glabella_min_y, glabella_max_x, glabella_max_y, glabella_mid_y = (-1, -1, -1, -1, 0)
         right_cheek_min_x, right_cheek_min_y, right_cheek_max_x, right_cheek_max_y = (-1, -1, -1, -1)
@@ -841,6 +916,11 @@ class LandmarkDetector:
                 side_max_x = min_x
                 points['right_eye_side'] = [(side_min_x, min_y, side_max_x - side_min_x, max_y - min_y)]
                 features['right_eye_side'] = img[min_y:max_y, side_min_x:side_max_x]
+                right_eye_side = np.array(points['right_eye_side'])
+                if wrinkle_rois is not None:
+                    wrinkle_rois = np.vstack((wrinkle_rois, right_eye_side))
+                else:
+                    wrinkle_rois = right_eye_side
                 cv2.rectangle(overlay, (side_min_x, min_y), (side_max_x, max_y), (255, 255, 0), 2)
                 # 오른쪽 볼 이미지 추가 사전 작업(1/2)
                 pts = landmarks[feature]
@@ -852,6 +932,11 @@ class LandmarkDetector:
                 side_max_x = max_x + int((max_x - min_x) * 0.7)
                 points['left_eye_side'] = [(side_min_x, min_y, side_max_x - side_min_x, max_y - min_y)]
                 features['left_eye_side'] = img[min_y:max_y, side_min_x:side_max_x]
+                left_eye_side = np.array(points['left_eye_side'])
+                if wrinkle_rois is not None:
+                    wrinkle_rois = np.vstack((wrinkle_rois, left_eye_side))
+                else:
+                    wrinkle_rois = left_eye_side
                 cv2.rectangle(overlay, (side_min_x, min_y), (side_max_x, max_y), (255, 255, 0), 2)
                 # 왼쪽 볼 이미지 추가 사전 작업(1/2)
                 pts = landmarks[feature]
@@ -878,6 +963,11 @@ class LandmarkDetector:
                 min_nx, min_ny, max_nx, max_ny = self.range_from_landmark(nose_for_pore)
                 points['nose_for_pore'] = [(min_nx, min_ny, max_nx - min_nx, max_ny - min_ny)]
                 features['nose_for_pore'] = img[min_ny:max_ny, min_nx:max_nx]
+                nose_for_pore = np.array(points['nose_for_pore'])
+                if pore_rois is not None:
+                    pore_rois = np.vstack((pore_rois, nose_for_pore))
+                else:
+                    pore_rois = nose_for_pore
                 cv2.rectangle(overlay, (min_nx, min_ny), (max_nx, max_ny), (255, 255, 0), 2)
             elif feature == 'mouth':
                 pass
@@ -888,6 +978,11 @@ class LandmarkDetector:
             glabella_min_y = glabella_mid_y - int((glabella_max_y - glabella_mid_y) * 1.3)
             points['glabella'] = [(glabella_min_x, glabella_min_y, glabella_max_x - glabella_min_x, glabella_max_y - glabella_min_y)]
             features['glabella'] = img[glabella_min_y:glabella_max_y, glabella_min_x:glabella_max_x]
+            glabella = np.array(points['glabella'])
+            if wrinkle_rois is not None:
+                wrinkle_rois = np.vstack((wrinkle_rois, glabella))
+            else:
+                wrinkle_rois = glabella
             cv2.rectangle(overlay, (glabella_min_x, glabella_min_y), (glabella_max_x, glabella_max_y), (255, 0, 255), 2)
 
         # 오른쪽 볼 추가
@@ -895,6 +990,11 @@ class LandmarkDetector:
             points['right_cheek'] = [(right_cheek_min_x, right_cheek_min_y, right_cheek_max_x - right_cheek_min_x,
                                       right_cheek_max_y - right_cheek_min_y)]
             features['right_cheek'] = img[right_cheek_min_y:right_cheek_max_y, right_cheek_min_x:right_cheek_max_x]
+            right_cheek = np.array(points['right_cheek'])
+            if pore_rois is not None:
+                pore_rois = np.vstack((pore_rois, right_cheek))
+            else:
+                pore_rois = right_cheek
             cv2.rectangle(overlay, (right_cheek_min_x, right_cheek_min_y), (right_cheek_max_x, right_cheek_max_y), (255, 0, 255), 2)
 
         # 왼쪽 볼 추가
@@ -902,18 +1002,48 @@ class LandmarkDetector:
             points['left_cheek'] = [(left_cheek_min_x, left_cheek_min_y, left_cheek_max_x - left_cheek_min_x,
                                       left_cheek_max_y - left_cheek_min_y)]
             features['left_cheek'] = img[left_cheek_min_y:left_cheek_max_y, left_cheek_min_x:left_cheek_max_x]
+            left_cheek = np.array(points['left_cheek'])
+            if pore_rois is not None:
+                pore_rois = np.vstack((pore_rois, left_cheek))
+            else:
+                pore_rois = left_cheek
             cv2.rectangle(overlay, (left_cheek_min_x, left_cheek_min_y), (left_cheek_max_x, left_cheek_max_y), (255, 0, 255), 2)
 
         # 눈, 코, 입 제거한 이미지 추가
-        # if any(n >= 0 for n in [face_min_x, face_min_y, face_max_x, face_max_y]):
-        #     face_pts = points['jaw']
-        #     for key, val in points.items():
-        #         if key.endswith('_eye'):
-        #             skin = self.remove_eyes(removed_landmarks_img, landmarks[key], face_pts)
-        #         elif key == 'nose': #'nose_for_pore'
-        #             skin = self.remove_nose(removed_landmarks_img, landmarks[key], face_pts)
-        #         elif key == 'mouth':
-        #             skin = self.remove_mouth(removed_landmarks_img, landmarks[key], face_pts)
+        if any(n >= 0 for n in [face_min_x, face_min_y, face_max_x, face_max_y]):
+            face_pts = points['jaw']
+            for key, val in points.items():
+                if key.endswith('_eye'):
+                    skin = self.remove_eyes(removed_landmarks_img, landmarks[key], face_pts)
+                elif key == 'nose': #'nose_for_pore'
+                    skin = self.remove_nose(removed_landmarks_img, landmarks[key], face_pts)
+                elif key == 'mouth':
+                    skin = self.remove_mouth(removed_landmarks_img, landmarks[key], face_pts)
+            features['skin_roi'] = skin
+
+        # 모공 분석용 이미지들을 하나의 이미지로 만듦. Vertical append
+        if len(pore_rois) > 0:
+            pore_height, pore_width = self.calc_appended_image_size(np.array(pore_rois))
+            # background_color = np.array([255, 255, 255], np.uint8)
+            pore_img = np.full((pore_height, pore_width, 3), 255, dtype=np.uint8)
+            prev_height = 0
+            for i, pts in enumerate(pore_rois):
+                temp_x, temp_y, temp_w, temp_h = pts
+                pore_img[prev_height:prev_height+temp_h, 0:temp_w] = img[temp_y:temp_y+temp_h, temp_x:temp_x+temp_w].copy()
+                prev_height += temp_h
+            features['pore_roi'] = pore_img
+
+        # 주름 분석용 이미지들을 하나의 이미지로 만듦. Vertical append
+        if len(wrinkle_rois) > 0:
+            wrinkle_height, wrinkle_width = self.calc_appended_image_size(np.array(wrinkle_rois))
+            # background_color = np.array([255, 255, 255], np.uint8)
+            wrinkle_img = np.full((wrinkle_height, wrinkle_width, 3), 255, dtype=np.uint8)
+            prev_height = 0
+            for i, pts in enumerate(wrinkle_rois):
+                temp_x, temp_y, temp_w, temp_h = pts
+                wrinkle_img[prev_height:prev_height+temp_h, 0:temp_w] = img[temp_y:temp_y+temp_h, temp_x:temp_x+temp_w].copy()
+                prev_height += temp_h
+            features['wrinkle_roi'] = wrinkle_img
 
         if visible:
             cv2.imshow('Features', overlay)
@@ -934,7 +1064,7 @@ class LandmarkDetector:
         max_x = max_xy[0, 0]
         max_y = max_xy[0, 1]
 
-        return (min_x, min_y, max_x, max_y)
+        return min_x, min_y, max_x, max_y
 
 
 def average_color(img):
@@ -946,6 +1076,23 @@ def average_color(img):
 
     return (avg_b, avg_g, avg_r)
 
+
+def change_key(dictionary, mapped_key):
+    return {mapped_key[key]: value for key, value in dictionary.items()}
+
+
+def get_random_normal(mean=0, stddev=0.1, size=1, min_val=0, max_val=100):
+    rand_val = int((max_val-min_val) / 2) + np.random.normal(mean, stddev, size) * max_val
+    underflow_mask = rand_val < min_val
+    overflow_mask = rand_val > max_val
+    if np.max(underflow_mask):
+        for i, is_underflow in enumerate(underflow_mask):
+            rand_val[i] = min_val
+    if np.max(overflow_mask):
+        for i, is_overflow in enumerate(overflow_mask):
+            rand_val[i] = max_val
+        rand_val = min(rand_val, max_val)
+    return rand_val
 
 def get_score_data(erythema=-1.0, emotion=-1.0, pigmentation=-1.0, pore=-1.0, wrinkle=-1.0):
     # 총점 계산(산술 평균) 시에 적용할 각 요소별 가중치, 각 가중치의 총합은 5가 되도록 유지해야함.
@@ -961,7 +1108,7 @@ def get_score_data(erythema=-1.0, emotion=-1.0, pigmentation=-1.0, pore=-1.0, wr
     points = [erythema, emotion, pigmentation, pore, wrinkle]
 
     # 요소에 대한 정보를 매개변수로 입력 받지 못한 경우 해당 점수를 임의값(범위: 0 ~ 1)으로 지정 후 numpy array로 생성.
-    scores = np.array([round(score, 2) if score > 0 else round(random.random() * 100, 2) for score in points])
+    scores = np.array([round(score, 2) if score > 0 else round(get_random_normal()[0], 2) for score in points])
     # 가중치를 적용한 평균 계산.
     score_total = np.average(scores * weights)
     score_total = round(score_total, 2)

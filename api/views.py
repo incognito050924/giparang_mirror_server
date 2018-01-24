@@ -14,7 +14,7 @@ from .serializers import UserSerializer, ResultSerializer, MeasuredSerializer, S
 from .filters import SkinDataFilter
 from datetime import date
 from .services.image_processor import bytes2opencv_img, resize_image, bgr2rgb
-from .services.analysis import Extractor, CascadeDetector, LandmarkDetector, Analyzer, get_score_data
+from .services.analysis import CascadeDetector, LandmarkDetector, Analyzer, get_score_data
 from .ml.predictor import predict_emotion
 import numpy as np
 from django.core.files.base import ContentFile
@@ -185,22 +185,26 @@ def test(request):
     gray_face = CascadeDetector().detect_face(img, use_gray=True, visible=False)
     face = resize_image(gray_face, (128, 128, 1))
     face = np.reshape(face, (128, 128, 1))
-    emotion_data = predict_emotion(np.expand_dims(face, 0), text_label=True, order_score=False)
-    print(emotion_data)
+    emotion, score = predict_emotion(np.expand_dims(face, 0), text_label=True)
+    emotion_data = {'emotion': emotion, 'score_emotion': score}
 
     # 피부 분석 모듈
     features, points = LandmarkDetector().detect_facial_feature(img, visible=False)
-    pore_img = features['nose_for_pore']
-    wrinkle_img = features['glabella']
-    extractor = Extractor()
-    extractor.extract_pore(pore_img)
-    extractor.extract_wrinkle(wrinkle_img)
-    print('Pores: ', extractor.pore)
-    print('Wrinkles: ', extractor.wrinkle)
+    pore_img = features['pore_roi']
+    wrinkle_img = features['wrinkle_roi']
+    skin_img = features['skin_roi']
 
-    score_dict = get_score_data()
-    data.update(score_dict)
+    analyzer = Analyzer()
+    result_data = analyzer.analyze_emotion(emotion_data)
+    result_data = analyzer.analyze_erythema(skin_img, result_data=result_data)
+    result_data = analyzer.analyze_pore(pore_img, result_data=result_data)
+    result_data = analyzer.analyze_pigmentation(skin_img, result_data=result_data)
+    result_data = analyzer.analyze_wrinkle(wrinkle_img, result_data=result_data)
+    result_data = analyzer.calc_total_score(result_data)
 
+    # score_dict = get_score_data()
+    data.update(result_data)
+    print(data)
     serializer = SkinDataSerializer(data=data)
     if serializer.is_valid():
         # print(serializer.validated_data['image'])

@@ -22,14 +22,34 @@ class SkinData(models.Model):
 
     """
     # user = models.ForeignKey(User)
+    # Measured data meta
     image = models.ImageField(upload_to='images/test/', blank=False)
     measured_at = models.DateTimeField(auto_now_add=True, editable=False)
     is_trained = models.BooleanField(default=False)
+    # Pore data { score, num }
     score_pore = models.FloatField(blank=True, default=-1)
+    pore_num = models.IntegerField(blank=True, default=0)
+    # Wrinkle data { score, num, avarge_area, darkness, pitch, length }
     score_wrinkle = models.FloatField(blank=True, default=-1)
+    wrinkle_num = models.IntegerField(blank=True, default=0)
+    wrinkle_average_area = models.IntegerField(blank=True, default=0)
+    wrinkle_darkness = models.IntegerField(blank=True, default=0)
+    wrinkle_pitch = models.IntegerField(blank=True, default=0)
+    wrinkle_length = models.IntegerField(blank=True, default=0)
+    # Pigmentation data { score, num, avarge_area, darkness }
     score_pigmentation = models.FloatField(blank=True, default=-1)
+    pigmentation_num = models.IntegerField(blank=True, default=0)
+    pigmentation_average_area = models.IntegerField(blank=True, default=0)
+    pigmentation_darkness = models.IntegerField(blank=True, default=0)
+    # Erythema data { score, num, avarge_area, darkness }
     score_erythema = models.FloatField(blank=True, default=-1)
+    erythema_num = models.IntegerField(blank=True, default=0)
+    erythema_average_area = models.IntegerField(blank=True, default=0)
+    erythema_darkness = models.IntegerField(blank=True, default=0)
+    # Emotion data
     score_emotion = models.FloatField(blank=True, default=-1)
+    emotion = models.CharField(blank=True, null=True, max_length=30)
+    # Total data
     score_total = models.FloatField(blank=True, default=-1)
     comment = models.TextField(default=None, blank=True, null=True)
 
