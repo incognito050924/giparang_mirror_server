@@ -90,47 +90,52 @@ class Extractor:
                      tv_1=client.TrackBarValue.NORMAL,
                      tv_2=client.TrackBarValue.NORMAL,
                      tv_3=client.TrackBarValue.NORMAL,
-                     tv_4=client.TrackBarValue.NORMAL):
+                     tv_4=client.TrackBarValue.NORMAL,
+                         visible = False):
 
-        request_data = client.serialize_req_param_data(client.SkinFeature.ERYTHEMA, img, tv_1, tv_2, tv_3, tv_4, False)
+        request_data = client.serialize_req_param_data(client.SkinFeature.ERYTHEMA, img, tv_1, tv_2, tv_3, tv_4, visible)
         return client.request(request_data)
 
     def extract_pore(self, img,
                      tv_1=client.TrackBarValue.NORMAL,
                      tv_2=client.TrackBarValue.NORMAL,
                      tv_3=client.TrackBarValue.NORMAL,
-                     tv_4=client.TrackBarValue.NORMAL):
+                     tv_4=client.TrackBarValue.NORMAL,
+                         visible = False):
 
-        request_data = client.serialize_req_param_data(client.SkinFeature.PORE, img, tv_1, tv_2, tv_3, tv_4, False )
+        request_data = client.serialize_req_param_data(client.SkinFeature.PORE, img, tv_1, tv_2, tv_3, tv_4, visible )
         return client.request(request_data)
 
     def extract_pigmentation(self, img,
                      tv_1=client.TrackBarValue.NORMAL,
                      tv_2=client.TrackBarValue.NORMAL,
                      tv_3=client.TrackBarValue.NORMAL,
-                     tv_4=client.TrackBarValue.NORMAL):
+                     tv_4=client.TrackBarValue.NORMAL,
+                         visible = False):
 
-        request_data = client.serialize_req_param_data(client.SkinFeature.PIGMENTATION, img, tv_1, tv_2, tv_3, tv_4, False)
+        request_data = client.serialize_req_param_data(client.SkinFeature.PIGMENTATION, img, tv_1, tv_2, tv_3, tv_4, visible)
         return client.request(request_data)
 
     def extract_wrinkle(self, img,
                      tv_1=client.TrackBarValue.NORMAL,
                      tv_2=client.TrackBarValue.NORMAL,
                      tv_3=client.TrackBarValue.NORMAL,
-                     tv_4=client.TrackBarValue.NORMAL):
+                     tv_4=client.TrackBarValue.NORMAL,
+                         visible = False):
 
-        request_data = client.serialize_req_param_data(client.SkinFeature.WRINKLE, img, tv_1, tv_2, tv_3, tv_4, False)
+        request_data = client.serialize_req_param_data(client.SkinFeature.WRINKLE, img, tv_1, tv_2, tv_3, tv_4, visible)
         return client.request(request_data)
 
     def extract_all(self, erythema_img, pore_img, pigmentation_img, wrinkle_img,
                      tv_1=client.TrackBarValue.NORMAL,
                      tv_2=client.TrackBarValue.NORMAL,
                      tv_3=client.TrackBarValue.NORMAL,
-                     tv_4=client.TrackBarValue.NORMAL):
-        self.extract_erythema(erythema_img, tv_1, tv_2, tv_3, tv_4)
-        self.extract_pore(pore_img, tv_1, tv_2, tv_3, tv_4)
-        self.extract_pigmentation(pigmentation_img, tv_1, tv_2, tv_3, tv_4)
-        self.extract_wrinkle(wrinkle_img, tv_1, tv_2, tv_3, tv_4)
+                     tv_4=client.TrackBarValue.NORMAL,
+                         visible = False):
+        self.extract_erythema(erythema_img, tv_1, tv_2, tv_3, tv_4, visible)
+        self.extract_pore(pore_img, tv_1, tv_2, tv_3, tv_4, visible)
+        self.extract_pigmentation(pigmentation_img, tv_1, tv_2, tv_3, tv_4, visible)
+        self.extract_wrinkle(wrinkle_img, tv_1, tv_2, tv_3, tv_4, visible)
 
     def getFeatureData(self):
         data = dict()
@@ -157,9 +162,9 @@ class Analyzer:
             emotion_data.update(result_data)
         return emotion_data
 
-    def analyze_erythema(self, erythema_img, result_data=None):
+    def analyze_erythema(self, erythema_img, result_data=None, visible=False):
         mapped_key = {'Count': 'erythema_num', 'Area': 'erythema_average_area', 'Darkness': 'erythema_darkness'}
-        erythema_data = self.extractor.extract_erythema(erythema_img)
+        erythema_data = self.extractor.extract_erythema(erythema_img, visible=visible)
         erythema_data = change_key(erythema_data, mapped_key)
         num_erythema = erythema_data['erythema_num']
         avg_area = erythema_data['erythema_average_area']
@@ -170,9 +175,9 @@ class Analyzer:
             erythema_data.update(result_data)
         return erythema_data
 
-    def analyze_pore(self, pore_img, result_data=None):
+    def analyze_pore(self, pore_img, result_data=None, visible=False):
         mapped_key = {'Count': 'pore_num'}
-        pore_data = self.extractor.extract_pore(pore_img)
+        pore_data = self.extractor.extract_pore(pore_img, visible=visible)
         pore_data = change_key(pore_data, mapped_key)
         num_pore = pore_data['pore_num']
         pore_data['score_pore'] = get_random_normal()[0]
@@ -181,9 +186,9 @@ class Analyzer:
             pore_data.update(result_data)
         return pore_data
 
-    def analyze_pigmentation(self, pigmentation_img, result_data=None):
+    def analyze_pigmentation(self, pigmentation_img, result_data=None, visible=False):
         mapped_key = {'Count': 'pigmentation_num', 'Area': 'pigmentation_average_area', 'Darkness': 'pigmentation_darkness'}
-        pigmentation_data = self.extractor.extract_pigmentation(pigmentation_img)
+        pigmentation_data = self.extractor.extract_pigmentation(pigmentation_img, visible=visible)
         pigmentation_data = change_key(pigmentation_data, mapped_key)
         num_pigmentation = pigmentation_data['pigmentation_num']
         avg_area = pigmentation_data['pigmentation_average_area']
@@ -194,10 +199,10 @@ class Analyzer:
             pigmentation_data.update(result_data)
         return pigmentation_data
 
-    def analyze_wrinkle(self, wrinkle_img, result_data=None):
+    def analyze_wrinkle(self, wrinkle_img, result_data=None, visible=False):
         mapped_key = {'Count': 'wrinkle_num', 'Area': 'wrinkle_average_area', 'Darkness': 'wrinkle_darkness',
                       'Pitch': 'wrinkle_pitch', 'Length': 'wrinkle_length'}
-        wrinkle_data = self.extractor.extract_wrinkle(wrinkle_img)
+        wrinkle_data = self.extractor.extract_wrinkle(wrinkle_img, visible=visible)
         wrinkle_data = change_key(wrinkle_data, mapped_key)
         num_wrinkle = wrinkle_data['wrinkle_num']
         avg_area = wrinkle_data['wrinkle_average_area']
@@ -316,7 +321,7 @@ class CascadeDetector:
                 cv2.destroyAllWindows()
         if faces is None or len(faces) == 0:
             face = gray
-        if use_gray and face.shape[2] == 3:
+        if use_gray and len(face.shape) == 3 and face.shape[2] == 3:
             face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
 
         return face

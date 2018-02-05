@@ -14,7 +14,7 @@ from .serializers import UserSerializer, ResultSerializer, MeasuredSerializer, S
 from .filters import SkinDataFilter
 from datetime import date
 from .services.image_processor import bytes2opencv_img, resize_image, bgr2rgb
-from .services.analysis import CascadeDetector, LandmarkDetector, Analyzer, get_score_data
+from .services.analysis import CascadeDetector, LandmarkDetector, Analyzer, get_score_data, NoFaces, TooManyFaces
 from .ml.predictor import predict_emotion
 import numpy as np
 from django.core.files.base import ContentFile
@@ -187,28 +187,39 @@ def test(request):
     face = np.reshape(face, (128, 128, 1))
     emotion, score = predict_emotion(np.expand_dims(face, 0), text_label=True)
     emotion_data = {'emotion': emotion, 'score_emotion': score}
+    try:
+        # 피부 분석 모듈
+        features, points = LandmarkDetector().detect_facial_feature(img, visible=False)
+        pore_img = features['pore_roi']
+        wrinkle_img = features['wrinkle_roi']
+        skin_img = features['skin_roi']
 
-    # 피부 분석 모듈
-    features, points = LandmarkDetector().detect_facial_feature(img, visible=False)
-    pore_img = features['pore_roi']
-    wrinkle_img = features['wrinkle_roi']
-    skin_img = features['skin_roi']
+        set_visible = False
+        analyzer = Analyzer()
+        result_data = analyzer.analyze_emotion(emotion_data)
+        result_data = analyzer.analyze_erythema(skin_img, result_data=result_data, visible=set_visible)
+        result_data = analyzer.analyze_pore(pore_img, result_data=result_data, visible=set_visible)
+        result_data = analyzer.analyze_pigmentation(skin_img, result_data=result_data, visible=set_visible)
+        result_data = analyzer.analyze_wrinkle(wrinkle_img, result_data=result_data, visible=set_visible)
+        result_data = analyzer.calc_total_score(result_data)
 
-    analyzer = Analyzer()
-    result_data = analyzer.analyze_emotion(emotion_data)
-    result_data = analyzer.analyze_erythema(skin_img, result_data=result_data)
-    result_data = analyzer.analyze_pore(pore_img, result_data=result_data)
-    result_data = analyzer.analyze_pigmentation(skin_img, result_data=result_data)
-    result_data = analyzer.analyze_wrinkle(wrinkle_img, result_data=result_data)
-    result_data = analyzer.calc_total_score(result_data)
+        # score_dict = get_score_data()
+        data.update(result_data)
+        print(data)
+        serializer = SkinDataSerializer(data=data)
+        if serializer.is_valid():
+            # print(serializer.validated_data['image'])
+            serializer.save()
+            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except NoFaces as no_face_err:
+        print('No faces', no_face_err)
+        return JsonResponse(request.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR, safe=False)
+    except TooManyFaces as too_many_err:
+        print('Too many faces', too_many_err)
+        return JsonResponse(request.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR, safe=False)
+    # except Error as e:
+    #     print(repr(e))
+    #     return JsonResponse(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # score_dict = get_score_data()
-    data.update(result_data)
-    print(data)
-    serializer = SkinDataSerializer(data=data)
-    if serializer.is_valid():
-        # print(serializer.validated_data['image'])
-        serializer.save()
-        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-    return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    # return JsonResponse(data)
+        # return JsonResponse(data)
