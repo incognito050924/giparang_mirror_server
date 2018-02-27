@@ -25,7 +25,7 @@ class SkinDataSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('image', 'measured_at', 'is_trained',
                   'score_erythema', 'erythema_num', 'erythema_average_area', 'erythema_darkness',
                   'score_emotion', 'emotion',
-                  'score_pigmentation', 'pigmentation_average_area', 'pigmentation_darkness',
+                  'score_pigmentation', 'pigmentation_num', 'pigmentation_average_area', 'pigmentation_darkness',
                   'score_pore', 'pore_num',
                   'score_wrinkle', 'wrinkle_num', 'wrinkle_average_area', 'wrinkle_darkness', 'wrinkle_pitch', 'wrinkle_length',
                   'score_total', 'comment',)

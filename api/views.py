@@ -214,10 +214,12 @@ def test(request):
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except NoFaces as no_face_err:
         print('No faces', no_face_err)
-        return JsonResponse(request.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR, safe=False)
+        error = {'error_msg': '인식된 얼굴이 없습니다.'}
+        return JsonResponse(error, status=status.HTTP_500_INTERNAL_SERVER_ERROR, safe=False)
     except TooManyFaces as too_many_err:
         print('Too many faces', too_many_err)
-        return JsonResponse(request.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR, safe=False)
+        error = {'error_msg': '너무 많은 얼굴이 인식되었습니다.'}
+        return JsonResponse(error, status=status.HTTP_500_INTERNAL_SERVER_ERROR, safe=False)
     # except Error as e:
     #     print(repr(e))
     #     return JsonResponse(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

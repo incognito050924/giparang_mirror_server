@@ -160,6 +160,11 @@ class Analyzer:
         emotion_data['score_emotion'] = (emotion_data['score_emotion'] + 4) * 10
         if result_data is not None:
             emotion_data.update(result_data)
+            # if 'process_msg' in emotion_data:
+            #     emotion_data['process_msg'] += '\nEmotion: ' + emotion_data['emotion']
+            # else:
+            #     emotion_data['process_msg'] = 'Emotion: ' + emotion_data['emotion']
+
         return emotion_data
 
     def analyze_erythema(self, erythema_img, result_data=None, visible=False):
@@ -170,9 +175,15 @@ class Analyzer:
         avg_area = erythema_data['erythema_average_area']
         avg_darkness = erythema_data['erythema_darkness']
         erythema_data['score_erythema'] = get_random_normal()[0]
+        process_msg = 'Erythema >> Count: %d, Area: %d, Darkness: %d' % (num_erythema, avg_area, avg_darkness)
         #print('Erythema[ %d, %d, %d ]' % (num_erythema, avg_area, avg_darkness))
         if result_data is not None:
             erythema_data.update(result_data)
+            # if 'process_msg' in erythema_data:
+            #     erythema_data['process_msg'] += '\n' + process_msg
+            # else:
+            #     erythema_data['process_msg'] = process_msg
+
         return erythema_data
 
     def analyze_pore(self, pore_img, result_data=None, visible=False):
@@ -181,9 +192,15 @@ class Analyzer:
         pore_data = change_key(pore_data, mapped_key)
         num_pore = pore_data['pore_num']
         pore_data['score_pore'] = get_random_normal()[0]
+        process_msg = 'Pore >> Count: %d' % (num_pore)
         #print('Pore[ %d ]' % (num_pore))
         if result_data is not None:
             pore_data.update(result_data)
+            # if 'process_msg' in pore_data:
+            #     pore_data['process_msg'] += '\n' + process_msg
+            # else:
+            #     pore_data['process_msg'] = process_msg
+
         return pore_data
 
     def analyze_pigmentation(self, pigmentation_img, result_data=None, visible=False):
@@ -194,9 +211,15 @@ class Analyzer:
         avg_area = pigmentation_data['pigmentation_average_area']
         avg_darkness = pigmentation_data['pigmentation_darkness']
         pigmentation_data['score_pigmentation'] = get_random_normal()[0]
+        process_msg = 'Pigmentation >> Count: %d, Area: %d, Darkness %d' % (num_pigmentation, avg_area, avg_darkness)
         #print('Pigmentation[ %d, %d, %d ]' % (num_pigmentation, avg_area, avg_darkness))
         if result_data is not None:
             pigmentation_data.update(result_data)
+            # if 'process_msg' in pigmentation_data:
+            #     pigmentation_data['process_msg'] += '\n' + process_msg
+            # else:
+            #     pigmentation_data['process_msg'] = process_msg
+
         return pigmentation_data
 
     def analyze_wrinkle(self, wrinkle_img, result_data=None, visible=False):
@@ -210,9 +233,14 @@ class Analyzer:
         pitch = wrinkle_data['wrinkle_pitch']
         length = wrinkle_data['wrinkle_length']
         wrinkle_data['score_wrinkle'] = get_random_normal()[0]
+        process_msg = 'Wrinkle >> Count: %d, Area: %d, Darkness: %d,\n\tPitch: %d, Length: %d' % (num_wrinkle, avg_area, avg_darkness, pitch, length)
         #print('Wrinkle[ %d, %d, %d, %d, %d ]' % (num_wrinkle, avg_area, avg_darkness, pitch, length))
         if result_data is not None:
             wrinkle_data.update(result_data)
+            # if 'process_msg' in wrinkle_data:
+            #     wrinkle_data['process_msg'] += '\n' + process_msg
+            # else:
+            #     wrinkle_data['process_msg'] = process_msg
         return wrinkle_data
 
     def calc_total_score(self, result_data):

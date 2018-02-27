@@ -11,6 +11,7 @@ def predict_emotion(img, text_label=True, checkpoint=None):
     num_classes = 7
     if checkpoint is None:
         checkpoint = 'net-0.ckpt'
+        # checkpoint = 'model.ckpt'
 
     # Variables
     x = tf.placeholder(tf.float32, [None, 128, 128, 1])
