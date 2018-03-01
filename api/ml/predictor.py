@@ -2,11 +2,14 @@ import os
 import tensorflow as tf
 from .models.cnn import inception_v3
 from .utils.pre_processing import preprocess_input
+from .inception_model_v3 import inference, MOVING_AVERAGE_DECAY
 
-save_dir = os.path.join(os.getcwd(), 'api', 'ml', 'trained', 'slim_inception_v3/')
+
+#save_dir = os.path.join(os.getcwd(), 'api', 'ml', 'trained', 'slim_inception_v3/')
+save_dir = os.path.join(os.getcwd(), 'api', 'ml', 'trained', 'train_dir')
 
 
-def predict_emotion(img, text_label=True, checkpoint=None):
+def predict_emotion_old(img, text_label=True, checkpoint=None):
     x_data = preprocess_input(img)
     num_classes = 7
     if checkpoint is None:
@@ -49,6 +52,48 @@ def predict_emotion(img, text_label=True, checkpoint=None):
         order = emotion_text2score[pred]
     else:
         emotion_logits2score = {0: 0, 1: 2, 2: 3, 3: 6, 4: 1, 5: 4, 6: 5}
+        order = emotion_logits2score[preds[0]]
+
+    return pred, order
+
+def predict_emotion(img, text_label=True):
+    x_data = preprocess_input(img)
+
+    x= tf.placeholder(tf.float32, [None, 299, 299, 1])
+
+    logits, endpoints = inference(x, 8)
+    prediction = tf.nn.softmax(logits, 1)
+
+    # Initialize Variables
+    init = tf.global_variables_initializer()
+
+    # Restore the moving average version of the learned variables for eval.
+    variable_averages = tf.train.ExponentialMovingAverage(
+        MOVING_AVERAGE_DECAY)
+    variables_to_restore = variable_averages.variables_to_restore()
+
+    # Saver
+    saver = tf.train.Saver(variables_to_restore)
+
+    # Generate Session & Build Graph
+    with tf.Session() as sess:
+        sess.run(init)
+
+        saver.restore(sess, os.path.join(save_dir, 'model.ckpt-2'))
+
+        preds = sess.run(tf.argmax(prediction, 1), feed_dict={x: x_data})
+        # print(preds, type(preds))
+
+    if text_label:
+        text_ground_truth = ['unknown', 'angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+        pred = text_ground_truth[preds[0]]
+
+    if text_label:
+        emotion_text2score = {'unknown': 0, 'angry': 1, 'sad': 2, 'disgust': 3, 'fear': 4,
+                              'surprise': 5, 'neutral': 6, 'happy': 7}
+        order = emotion_text2score[pred]
+    else:
+        emotion_logits2score = {0: 0, 1: 1, 2: 4, 3: 7, 4: 2, 5: 5, 6: 6}
         order = emotion_logits2score[preds[0]]
 
     return pred, order

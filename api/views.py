@@ -183,8 +183,8 @@ def test(request):
 
     # 표정 예측 모델
     gray_face = CascadeDetector().detect_face(img, use_gray=True, visible=False)
-    face = resize_image(gray_face, (128, 128, 1))
-    face = np.reshape(face, (128, 128, 1))
+    face = resize_image(gray_face, (299, 299, 1))
+    face = np.reshape(face, (299, 299, 1))
     emotion, score = predict_emotion(np.expand_dims(face, 0), text_label=True)
     emotion_data = {'emotion': emotion, 'score_emotion': score}
     try:
