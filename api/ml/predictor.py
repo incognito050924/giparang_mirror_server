@@ -79,7 +79,7 @@ def predict_emotion(img, text_label=True):
     with tf.Session() as sess:
         sess.run(init)
 
-        saver.restore(sess, os.path.join(save_dir, 'model.ckpt-2'))
+        saver.restore(sess, os.path.join(save_dir, 'model.ckpt-15000'))
 
         preds = sess.run(tf.argmax(prediction, 1), feed_dict={x: x_data})
         # print(preds, type(preds))
@@ -89,11 +89,11 @@ def predict_emotion(img, text_label=True):
         pred = text_ground_truth[preds[0]]
 
     if text_label:
-        emotion_text2score = {'unknown': 0, 'angry': 1, 'sad': 2, 'disgust': 3, 'fear': 4,
+        emotion_text2score = {'unknown': 6, 'angry': 1, 'sad': 2, 'disgust': 3, 'fear': 4,
                               'surprise': 5, 'neutral': 6, 'happy': 7}
         order = emotion_text2score[pred]
     else:
-        emotion_logits2score = {0: 0, 1: 1, 2: 4, 3: 7, 4: 2, 5: 5, 6: 6}
+        emotion_logits2score = {0: 6, 1: 1, 2: 3, 3: 4, 4: 7, 5: 2, 6: 5, 7: 6}
         order = emotion_logits2score[preds[0]]
 
     return pred, order

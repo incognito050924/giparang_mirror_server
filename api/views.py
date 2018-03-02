@@ -1,4 +1,4 @@
-
+import time
 import os
 import copy
 from django.shortcuts import render
@@ -177,6 +177,7 @@ def test(request):
     """
     측정 데이터 분석 후 분석데이터 저장(POST method) 및 점수리스트 조회(GET method)
     """
+    start_ms = int(round(time.time() * 1000))
     data = request.data
     temp_img = copy.deepcopy(request.FILES['image'])
     img = bytes2opencv_img(temp_img)
@@ -210,6 +211,8 @@ def test(request):
         if serializer.is_valid():
             # print(serializer.validated_data['image'])
             serializer.save()
+            # 응답시간
+            print(int(round(time.time() * 1000)) - start_ms, 'milliseconds')
             return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
         return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     except NoFaces as no_face_err:

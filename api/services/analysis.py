@@ -475,7 +475,7 @@ class LandmarkDetector:
         return overlay
 
     def calc_appended_image_size(self, img_points):
-        # print(img_points)
+        print('analysis 478 points', img_points)
         width = np.max(img_points, axis=0)[2]
         height = 0
         for i, pts in enumerate(img_points):
