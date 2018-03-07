@@ -168,13 +168,18 @@ class Analyzer:
         return emotion_data
 
     def analyze_erythema(self, erythema_img, result_data=None, visible=False):
+        min_scroe_rate = 0.3
+        h, w = erythema_img.shape[:2]
+        img_size = h * w
         mapped_key = {'Count': 'erythema_num', 'Area': 'erythema_average_area', 'Darkness': 'erythema_darkness'}
         erythema_data = self.extractor.extract_erythema(erythema_img, visible=visible)
         erythema_data = change_key(erythema_data, mapped_key)
         num_erythema = erythema_data['erythema_num']
         avg_area = erythema_data['erythema_average_area']
         avg_darkness = erythema_data['erythema_darkness']
-        erythema_data['score_erythema'] = get_random_normal()[0]
+        erythema_data['score_erythema'] = calc_score(img_size=img_size, count=num_erythema, area=avg_area,
+                                                     darkness=avg_darkness, min_score_rate=min_scroe_rate)
+        # erythema_data['score_erythema'] = get_random_normal()[0]
         process_msg = 'Erythema >> Count: %d, Area: %d, Darkness: %d' % (num_erythema, avg_area, avg_darkness)
         #print('Erythema[ %d, %d, %d ]' % (num_erythema, avg_area, avg_darkness))
         if result_data is not None:
@@ -187,11 +192,15 @@ class Analyzer:
         return erythema_data
 
     def analyze_pore(self, pore_img, result_data=None, visible=False):
+        min_score_rate = 0.4
+        h, w = pore_img.shape[:2]
+        img_size = h * w
         mapped_key = {'Count': 'pore_num'}
         pore_data = self.extractor.extract_pore(pore_img, visible=visible)
         pore_data = change_key(pore_data, mapped_key)
         num_pore = pore_data['pore_num']
-        pore_data['score_pore'] = get_random_normal()[0]
+        pore_data['score_pore'] = calc_score(img_size=img_size, count=num_pore, min_score_rate=min_score_rate)
+        # pore_data['score_pore'] = get_random_normal()[0]
         process_msg = 'Pore >> Count: %d' % (num_pore)
         #print('Pore[ %d ]' % (num_pore))
         if result_data is not None:
@@ -204,13 +213,18 @@ class Analyzer:
         return pore_data
 
     def analyze_pigmentation(self, pigmentation_img, result_data=None, visible=False):
+        min_score_rate = 0.3
+        h, w = pigmentation_img.shape[:2]
+        img_size = h * w
         mapped_key = {'Count': 'pigmentation_num', 'Area': 'pigmentation_average_area', 'Darkness': 'pigmentation_darkness'}
         pigmentation_data = self.extractor.extract_pigmentation(pigmentation_img, visible=visible)
         pigmentation_data = change_key(pigmentation_data, mapped_key)
         num_pigmentation = pigmentation_data['pigmentation_num']
         avg_area = pigmentation_data['pigmentation_average_area']
         avg_darkness = pigmentation_data['pigmentation_darkness']
-        pigmentation_data['score_pigmentation'] = get_random_normal()[0]
+        pigmentation_data['score_pigmentation'] = calc_score(img_size=img_size, count=num_pigmentation, area=avg_area,
+                                                             darkness=avg_darkness, min_score_rate=min_score_rate)
+        # pigmentation_data['score_pigmentation'] = get_random_normal()[0]
         process_msg = 'Pigmentation >> Count: %d, Area: %d, Darkness %d' % (num_pigmentation, avg_area, avg_darkness)
         #print('Pigmentation[ %d, %d, %d ]' % (num_pigmentation, avg_area, avg_darkness))
         if result_data is not None:
@@ -1126,6 +1140,20 @@ def get_random_normal(mean=0, stddev=0.1, size=1, min_val=0, max_val=100):
             rand_val[i] = max_val
         rand_val = min(rand_val, max_val)
     return rand_val
+
+
+def calc_score(img_size, count, area=None, darkness=None, pitch=None, length=None, min_score_rate=0.2):
+    rate_per_one_pts = min_score_rate / 100
+
+    if pitch is not None and length is not None and area is not None and darkness is not None:
+        score = 100 - (count * area / img_size / rate_per_one_pts)
+    elif area is not None and darkness is not None:
+        score = 100 - (count * area / img_size / rate_per_one_pts)
+    else:
+        score = 100 - (count / img_size / rate_per_one_pts)
+
+    return max(score, 100)
+
 
 def get_score_data(erythema=-1.0, emotion=-1.0, pigmentation=-1.0, pore=-1.0, wrinkle=-1.0):
     # 총점 계산(산술 평균) 시에 적용할 각 요소별 가중치, 각 가중치의 총합은 5가 되도록 유지해야함.
