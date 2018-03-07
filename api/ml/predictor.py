@@ -89,11 +89,11 @@ def predict_emotion(img, text_label=True):
         pred = text_ground_truth[preds[0]]
 
     if text_label:
-        emotion_text2score = {'unknown': 6, 'angry': 1, 'sad': 2, 'disgust': 3, 'fear': 4,
-                              'surprise': 5, 'neutral': 6, 'happy': 7}
+        emotion_text2score = {'unknown': 6, 'angry': 0, 'sad': 1, 'disgust': 2, 'fear': 3,
+                              'surprise': 4, 'neutral': 5, 'happy': 6}
         order = emotion_text2score[pred]
     else:
-        emotion_logits2score = {0: 6, 1: 1, 2: 3, 3: 4, 4: 7, 5: 2, 6: 5, 7: 6}
+        emotion_logits2score = {0: 6, 1: 0, 2: 2, 3: 3, 4: 6, 5: 1, 6: 4, 7: 5}
         order = emotion_logits2score[preds[0]]
 
     return pred, order

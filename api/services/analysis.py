@@ -6,6 +6,18 @@ import dlib
 import math
 from .network import client
 
+def get_min_score_rate(type='pore'):
+    if type == 'pore':
+        return 0.01
+    elif type == 'wrinkle':
+        return 0.3
+    elif type == 'erythema':
+        return 0.3
+    elif type == 'pigmentation':
+        return 0.3
+    else:
+        return 1.0
+
 def gradation_width(img, from_color, to_color):
     h, w = img.shape[:2]
     if w <= 0:
@@ -168,7 +180,7 @@ class Analyzer:
         return emotion_data
 
     def analyze_erythema(self, erythema_img, result_data=None, visible=False):
-        min_scroe_rate = 0.3
+        min_scroe_rate = get_min_score_rate('erythema')
         h, w = erythema_img.shape[:2]
         img_size = h * w
         mapped_key = {'Count': 'erythema_num', 'Area': 'erythema_average_area', 'Darkness': 'erythema_darkness'}
@@ -177,6 +189,7 @@ class Analyzer:
         num_erythema = erythema_data['erythema_num']
         avg_area = erythema_data['erythema_average_area']
         avg_darkness = erythema_data['erythema_darkness']
+        print('erythema::')
         erythema_data['score_erythema'] = calc_score(img_size=img_size, count=num_erythema, area=avg_area,
                                                      darkness=avg_darkness, min_score_rate=min_scroe_rate)
         # erythema_data['score_erythema'] = get_random_normal()[0]
@@ -192,13 +205,14 @@ class Analyzer:
         return erythema_data
 
     def analyze_pore(self, pore_img, result_data=None, visible=False):
-        min_score_rate = 0.4
+        min_score_rate = get_min_score_rate('pore')
         h, w = pore_img.shape[:2]
         img_size = h * w
         mapped_key = {'Count': 'pore_num'}
         pore_data = self.extractor.extract_pore(pore_img, visible=visible)
         pore_data = change_key(pore_data, mapped_key)
         num_pore = pore_data['pore_num']
+        print('pore::')
         pore_data['score_pore'] = calc_score(img_size=img_size, count=num_pore, min_score_rate=min_score_rate)
         # pore_data['score_pore'] = get_random_normal()[0]
         process_msg = 'Pore >> Count: %d' % (num_pore)
@@ -213,7 +227,7 @@ class Analyzer:
         return pore_data
 
     def analyze_pigmentation(self, pigmentation_img, result_data=None, visible=False):
-        min_score_rate = 0.3
+        min_score_rate = get_min_score_rate('pigmentation')
         h, w = pigmentation_img.shape[:2]
         img_size = h * w
         mapped_key = {'Count': 'pigmentation_num', 'Area': 'pigmentation_average_area', 'Darkness': 'pigmentation_darkness'}
@@ -222,6 +236,7 @@ class Analyzer:
         num_pigmentation = pigmentation_data['pigmentation_num']
         avg_area = pigmentation_data['pigmentation_average_area']
         avg_darkness = pigmentation_data['pigmentation_darkness']
+        print('pigmentation::')
         pigmentation_data['score_pigmentation'] = calc_score(img_size=img_size, count=num_pigmentation, area=avg_area,
                                                              darkness=avg_darkness, min_score_rate=min_score_rate)
         # pigmentation_data['score_pigmentation'] = get_random_normal()[0]
@@ -237,6 +252,9 @@ class Analyzer:
         return pigmentation_data
 
     def analyze_wrinkle(self, wrinkle_img, result_data=None, visible=False):
+        min_score_rate = get_min_score_rate('wrinkle')
+        h, w = wrinkle_img.shape[:2]
+        img_size = h * w
         mapped_key = {'Count': 'wrinkle_num', 'Area': 'wrinkle_average_area', 'Darkness': 'wrinkle_darkness',
                       'Pitch': 'wrinkle_pitch', 'Length': 'wrinkle_length'}
         wrinkle_data = self.extractor.extract_wrinkle(wrinkle_img, visible=visible)
@@ -246,7 +264,10 @@ class Analyzer:
         avg_darkness = wrinkle_data['wrinkle_darkness']
         pitch = wrinkle_data['wrinkle_pitch']
         length = wrinkle_data['wrinkle_length']
-        wrinkle_data['score_wrinkle'] = get_random_normal()[0]
+        print('wrinkle::')
+        #wrinkle_data['score_wrinkle'] = calc_score(img_size=img_size, count=num_wrinkle, area=avg_area,
+        #                                          darkness=avg_darkness, pitch=pitch, length=length, min_score_rate=min_score_rate)
+        wrinkle_data['score_wrinkle'] = get_random_normal()[0] + 15
         process_msg = 'Wrinkle >> Count: %d, Area: %d, Darkness: %d,\n\tPitch: %d, Length: %d' % (num_wrinkle, avg_area, avg_darkness, pitch, length)
         #print('Wrinkle[ %d, %d, %d, %d, %d ]' % (num_wrinkle, avg_area, avg_darkness, pitch, length))
         if result_data is not None:
@@ -489,7 +510,6 @@ class LandmarkDetector:
         return overlay
 
     def calc_appended_image_size(self, img_points):
-        print('analysis 478 points', img_points)
         width = np.max(img_points, axis=0)[2]
         height = 0
         for i, pts in enumerate(img_points):
@@ -1144,15 +1164,20 @@ def get_random_normal(mean=0, stddev=0.1, size=1, min_val=0, max_val=100):
 
 def calc_score(img_size, count, area=None, darkness=None, pitch=None, length=None, min_score_rate=0.2):
     rate_per_one_pts = min_score_rate / 100
+    print('IMG_SIZE', img_size)
 
     if pitch is not None and length is not None and area is not None and darkness is not None:
-        score = 100 - (count * area / img_size / rate_per_one_pts)
+        print((count * area / img_size ) / rate_per_one_pts)
+        score = 100 - ((count * area / img_size ) / rate_per_one_pts)
     elif area is not None and darkness is not None:
-        score = 100 - (count * area / img_size / rate_per_one_pts)
+        print((area / img_size ) / rate_per_one_pts)
+        score = 100 - ((area / img_size ) / rate_per_one_pts)
     else:
-        score = 100 - (count / img_size / rate_per_one_pts)
-
-    return max(score, 100)
+        print((count / img_size) / rate_per_one_pts)
+        score = 100 - ((count / img_size) / rate_per_one_pts)
+    if score < 0:
+        score = 0
+    return min(score, 100)
 
 
 def get_score_data(erythema=-1.0, emotion=-1.0, pigmentation=-1.0, pore=-1.0, wrinkle=-1.0):
